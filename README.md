@@ -50,6 +50,7 @@ struct HasAddress {
 
 #[derive(Type)]
 #[type(extending=("Named", "HasAddress")]
+#[index("name")]
 struct User {
     #[link("User"), multi="true")]
     friends: Link<User>
@@ -73,6 +74,9 @@ class HasAddress:
 @edgetype(extending=(Named, HasAddress))
 class User:
     friends: MultiLink[__qualname__]
+    index:   {
+        "name": lambda title : "User name index"
+    }
 ```
 
 ### Installation
