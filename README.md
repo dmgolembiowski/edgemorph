@@ -1,2 +1,1 @@
-# edgemorph
-EdgeDB manipulator of relational, polymorphic hierarchies 
+# edgemorph: edgedb manipulator of relational, polymorphic hierarchies 
