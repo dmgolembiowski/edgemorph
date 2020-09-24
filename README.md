@@ -34,19 +34,22 @@ type User extending Named, HasAddress {
 ```rust
 use edgemorph::{Type, Property, Link}
 
-#[derive(Type, abstract="true")]
+#[derive(Type)]
+#[type(abstract="true")]
 struct Named {
     #[property("str", required="true")]
     name: Property<String>
 }
 
-#[derive(Type, abstract="true")]
+#[derive(Type)]
+#[type(abstract="true")]
 struct HasAddress {
     #[property("str")]
     address: Property<String>
 }
 
-#[derive(Type, extending=("Named", "HasAddress")]
+#[derive(Type)]
+#[type(extending=("Named", "HasAddress")]
 struct User {
     #[link("User"), multi="true")]
     friends: Link<User>
