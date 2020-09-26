@@ -1,15 +1,6 @@
-# Edgemorph
-*An EdgeDB Manipulator of Relational, Polymorphic Hierarchies*
-<br />
+![EdgemorphBanner](/banner.png)
 
-### Synopsis
-(Motivations for this library)
-
-### Usage
-
-( Describe the importance of manipulating the object hierarchy with a fluid schema that does not compromise runtime performance )
-
-#### EdgeQL Schema Definition
+#### Continue Writing EdgeQL as Normal
 
 ```sql
 abstract type Named {
@@ -27,6 +18,24 @@ type User extending Named, HasAddress {
     # define an index for User based on name
     index on (__subject__.name);
 }
+```
+
+#### but now — add the `edgemorph.toml` file to your project
+
+```toml
+[package]
+name = "<my project name>"
+authors = "<your name>"
+description = "Edgemorph project configuration file"
+
+[edgemorph]
+enable_rs_binding = "true"
+enable_py_binding = "true"
+project_root      = ["<this file's parent directory>"]
+schema_dir        = ["<project_root>/<path to schemas>"]
+
+[edgedb]
+
 ```
 
 #### Rust API
