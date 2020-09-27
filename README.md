@@ -23,19 +23,25 @@ type User extending Named, HasAddress {
 #### but now — add the `edgemorph.toml` file to your project
 
 ```toml
-[package]
-name = "<my project name>"
-authors = "<your name>"
-description = "Edgemorph project configuration file"
-
 [edgemorph]
 enable_rs_binding = "true"
 enable_py_binding = "true"
 project_root      = ["<this file's parent directory>"]
-schema_dir        = ["<project_root>/<path to schemas>"]
+schema_dir        = ["<path to schemas>"]
 
 [edgedb]
-
+databases         = [ 
+    [
+        ["dsn", "<dsn_1>"], 
+        ["database", "<database_name_1>"], 
+        ["module", "<module_name_1>"]
+    ],
+    [
+        ["dsn", "<dsn_2>"], 
+        ["database", "<database_name_2>"], 
+        ["module", "<module_name_2>"]
+    ]
+]
 ```
 
 #### Rust API
