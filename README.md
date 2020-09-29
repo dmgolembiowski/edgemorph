@@ -94,19 +94,19 @@ struct User {
 #### Python API
 
 ```python
-from edgemorph import ( edgetype, Property, MultiLink )
+from edgemorph import ( edgetype, property, link, multi )
 
 @edgetype(abstract=True)
 class Named:
-    name: Property[str]
+    name: property[str]
 
 @edgetype(abstract=True)
 class HasAddress:
-    address: Property[str]
+    address: property[str]
 
 @edgetype(extending=(Named, HasAddress))
 class User:
-    friends: MultiLink[__qualname__]
+    friends: multi[link[__qualname__]]
     index:   {
         "name": lambda title : "User name index"
     }
