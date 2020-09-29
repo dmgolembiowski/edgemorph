@@ -58,7 +58,7 @@ databases         = {
 
 Unlike traditional object-relational mappers, Edgemorph requires users to write database level code in EdgeQL (EdgeDB Query Language) so that it can be compiled into a bytecode library target. Additionally, the compiler returns pre-baked files in [any of the supported programming languages]() so that project-level code can communicate with EdgeDB databases using common ORM coding patterns. For instance, `edm compile -f user.edgeql` would compile the user module file and return both a library with a `.so` extension, in addition to files in [the supported language targets]() i.e. Rust, Python, or both, with typical ORM methods each of the types.
 
-#### Rust API
+#### Rust API Output
 
 ```rust
 use crate::edm_user::{NamedType, UserType, HasAddressType};
@@ -88,7 +88,7 @@ struct User {
 ```
 
 
-#### Python API
+#### Python API Output
 
 ```python
 from edgemorph import ( edgetype, property, link, multi )
