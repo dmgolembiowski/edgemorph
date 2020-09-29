@@ -27,7 +27,25 @@ type User extending Named, HasAddress {
 enable_rs_binding = "true"
 enable_py_binding = "true"
 project_root      = ["<this file's parent directory>"]
-schema_dir        = ["<path to schemas>"]
+mod_directories   = [
+    "<relative path to dirA>",
+    "<relative path to dirB>",
+    "<relative path to dirC>",
+    "..."
+]
+edgemorph_output  = [
+    [
+        "rust", [
+            ["module_file_A", "</path/to/output_A>.rs"]
+        ]
+    ],
+    [
+        "python", [
+            ["module_file_B", "</path/to/output_B>.py"],
+            ["module_file_C", "</path/to/output_C>.py"]
+        ]
+    ]
+]
 
 [edgedb]
 databases         = [ 
