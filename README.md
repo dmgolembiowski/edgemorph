@@ -20,7 +20,7 @@ type User extending Named, HasAddress {
 }
 ```
 
-> but now — your projects can leverage [`edm`](https://github.com/dmgolembiowski/edgemorph/tree/master/edm) to manage EdgeDB module schemas captured in a `edgemorph.toml`, where database modules are configured at the project-level.
+but now — your projects can leverage [`edm`](https://github.com/dmgolembiowski/edgemorph/tree/master/edm) to manage EdgeDB module schemas captured in a `edgemorph.toml`, where database modules are configured at the project-level.
 
 ```toml
 [edgemorph]
@@ -56,7 +56,7 @@ databases         = {
 }
 ```
 
-> Unlike traditional object-relational mappers, Edgemorph requires users to write database level code in EdgeQL (EdgeDB Query Language) so that it can be compiled into a bytecode library target. Additionally, the compiler returns pre-baked files in [any of the supported programming languages]() so that project-level code can communicate with EdgeDB databases using common ORM coding patterns. For instance, `edm compile -f user.edgeql` would compile the user module file and return both a library with a `.so` extension, in addition to files in [the supported language targets]() i.e. Rust, Python, or both, with typical ORM methods each of the types.
+Unlike traditional object-relational mappers, Edgemorph requires users to write database level code in EdgeQL (EdgeDB Query Language) so that it can be compiled into a bytecode library target. Additionally, the compiler returns pre-baked files in [any of the supported programming languages]() so that project-level code can communicate with EdgeDB databases using common ORM coding patterns. For instance, `edm compile -f user.edgeql` would compile the user module file and return both a library with a `.so` extension, in addition to files in [the supported language targets]() i.e. Rust, Python, or both, with typical ORM methods each of the types.
 
 #### Rust API
 
@@ -110,7 +110,7 @@ class User:
     }
 ```
 
-> In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
+In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
 
 ### Installation
 
