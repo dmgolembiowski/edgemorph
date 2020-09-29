@@ -20,7 +20,7 @@ type User extending Named, HasAddress {
 }
 ```
 
-#### but now — add the `edgemorph.toml` file to your project
+> but now — your projects can leverage [`edm`](https://github.com/dmgolembiowski/edgemorph/tree/master/edm) to manage EdgeDB module schemas captured in a `edgemorph.toml`, where database modules are configured at the project-level.
 
 ```toml
 [edgemorph]
@@ -56,26 +56,29 @@ databases         = {
 }
 ```
 
+> Unlike traditional object-relational mappers, Edgemorph requires users to write database level code in EdgeQL (EdgeDB Query Language) so that it can be compiled into a bytecode library target. Additionally, the compiler returns pre-baked files in [any of the supported programming languages]() so that project-level code can communicate with EdgeDB databases using common ORM coding patterns. For instance, `edm compile -f user.edgeql` would return both the ".so" library target and files in Rust or Python.
+
 #### Rust API
 
 ```rust
-use edgemorph::{Type, Property, Link}
+use crate::edm_user::{NamedType, UserType, HasAddressType};
+use edgemorph::*;
 
-#[derive(Type)]
+#[derive(NamedType)]
 #[type(abstract="true")]
 struct Named {
     #[property("str", required="true")]
     name: Property<String>
 }
 
-#[derive(Type)]
+#[derive(HasAddressType)]
 #[type(abstract="true")]
 struct HasAddress {
     #[property("str")]
     address: Property<String>
 }
 
-#[derive(Type)]
+#[derive(UserType)]
 #[type(extending=("Named", "HasAddress")]
 #[index("name")]
 struct User {
@@ -89,22 +92,25 @@ struct User {
 
 ```python
 from edgemorph import ( edgetype, property, link, multi )
+from .edm_user import ( NamedType, HasAddressType, UserType )
 
-@edgetype(abstract=True)
+@edgetype(abstract=True, edb=NamedType)
 class Named:
     name: property[str]
 
-@edgetype(abstract=True)
+@edgetype(abstract=True, edb=HasAddressType)
 class HasAddress:
     address: property[str]
 
-@edgetype(extending=(Named, HasAddress))
+@edgetype(extending=(Named, HasAddress), edb=UserType)
 class User:
     friends: multi[ link[__qualname__] ]
     index:   {
         "name": lambda title : "User name index"
     }
 ```
+
+> In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
 
 ### Installation
 
