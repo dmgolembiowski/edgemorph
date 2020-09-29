@@ -1,5 +1,6 @@
 import sys
-from functools import wraps
+from functools import (wraps, lru_cache)
+import functools
 from dataclasses import (
         _cmp_fn,
         dataclass,
@@ -21,11 +22,18 @@ from dataclasses import (
 
 import inspect
 import types
-from typing import ( Tuple, Union, Any )
+from typing import ( Tuple, Union, Any, Generic, ForwardRef, TypeVar, List, NewType )
 
-__all__ = ( "edgetype" )
+__all__ = ( 
+        "edgetype",
+        "link",
+        "multi",
+        "property",
+        "single",
+        "readonly",
+        )
 
-def _proc(cls, is_abstract, extending, init, repr, eq, order, unsafe_hash, frozen):
+def _proc(cls, abstract, extending, init, repr, eq, order, unsafe_hash, frozen):
     
     fields = {}
 
@@ -168,13 +176,13 @@ def _proc(cls, is_abstract, extending, init, repr, eq, order, unsafe_hash, froze
         # Create a class doc-string.
         cls.__doc__ = (cls.__name__ +
                        str(inspect.signature(cls)).replace(' -> None', ''))
-    cls.is_abstract = is_abstract
+    cls.abstract = abstract
     new_annots = {}
 
     def cond_update(ty: object):
         nonlocal new_annots
         try:
-            assert(ty.is_abstract)
+            assert(ty.abstract)
             try:
                 new_annots.update(ty.__annotations__)
             except AttributeError:
@@ -182,13 +190,12 @@ def _proc(cls, is_abstract, extending, init, repr, eq, order, unsafe_hash, froze
                 pass
         except AssertionError:
             # We do care if it fails
-            err = ValueError(f"Cannot extend `{cls.__qualname__}` with `{ty}` because `{ty}` is not abstract. [Help: Try modifying `{ty.__qualname__}`'s decorator to `@edgetype(..., is_abstract=True)`]")
+            err = ValueError(f"Cannot extend `{cls.__qualname__}` with `{ty}` because `{ty}` is not abstract. [Help: Try modifying `{ty.__qualname__}`'s decorator to `@edgetype(..., abstract=True)`]")
             raise(err)
     
     def update_cls():
         nonlocal new_annots
-        nonlocal cls
-        cls.__annotations__ = new_annots
+        cls.__annotations__ = {**cls.__annotations__, **new_annots}
     
     # Performance hit to ensure well-orderedness
     if not isinstance(extending, tuple):
@@ -207,8 +214,123 @@ def _proc(cls, is_abstract, extending, init, repr, eq, order, unsafe_hash, froze
     cls.extending = extending
     return cls
 
+
+_cleanups = []
+def _tp_cache(func):
+    """Internal wrapper caching __getitem__ of generic types with a fallback to
+    original function for non-hashable arguments.
+    """
+    cached = functools.lru_cache()(func)
+    _cleanups.append(cached.cache_clear)
+
+    @functools.wraps(func)
+    def inner(*args, **kwds):
+        try:
+            return cached(*args, **kwds)
+        except TypeError:
+            pass  # All real errors (not unhashable args) are raised below.
+        return func(*args, **kwds)
+    return inner
+
+
+class _Final:
+    """Mixin to prohibit subclassing"""
+
+    __slots__ = ('__weakref__',)
+
+    def __init_subclass__(self, /, *args, **kwds):
+        if '_root' not in kwds:
+            raise TypeError("Cannot subclass special typing classes")
+
+class _SpecialForm(_Final, _root=True):
+    __slots__ = ('_name', '__doc__', '_getitem')
+
+    def __init__(self, getitem):
+        self._getitem = getitem
+        self._name = getitem.__name__
+        self.__doc__ = getitem.__doc__
+
+    def __mro_entries__(self, bases):
+        raise TypeError(f"Cannot subclass {self!r}")
+
+    def __repr__(self):
+        return 'typing.' + self._name
+
+    def __reduce__(self):
+        return self._name
+
+    def __call__(self, *args, **kwds):
+        raise TypeError(f"Cannot instantiate {self!r}")
+
+    def __instancecheck__(self, obj):
+        raise TypeError(f"{self} cannot be used with isinstance()")
+
+    def __subclasscheck__(self, cls):
+        raise TypeError(f"{self} cannot be used with issubclass()")
+
+    @_tp_cache
+    def __getitem__(self, parameters):
+        return self._getitem(self, parameters)
+
+@_SpecialForm
+def property(self, T: Any):
+    
+    # __subject__ = TypeVar("__subject__", T)
+    return Union[T, type(None)]
+
+@_SpecialForm
+def link(self, T: Any):
+   
+    # To Do once `edgeql-rust` is publicly available:
+    # - Return a copy of a mutable pointer to the heap-allocated Link<T>
+    #   and register it to 'T'
+    #
+    #
+    #
+    #
+    
+    # __subject__ = TypeVar("__subject__", T)
+    return Union[T, type(None)]
+
+@_SpecialForm
+def single(self, parameter: "Union[link[Any], property[Any]]"):
+    
+    # To Do once `edgeql-rust` is publicly available:
+    # - Return a copy of a mutable pointer to the heap-allocated Link<T>
+    #   and register it to 'T'
+    #
+    #
+    #
+    #
+    # __subject__ = TypeVar('__subject__', parameter)
+    return Union[parameter, type(None)]
+
+
+@_SpecialForm
+def multi(self, parameter: "Union[link[Any], property[Any]]"):
+    
+    # To Do once `edgeql-rust` is publicly available:
+    # - Return a copy of a mutable pointer to the heap-allocated Link<T>
+    #   and register it to 'T'
+    #
+    #
+    #
+    #
+    # __subject__ = TypeVar('__subject__', parameter)
+    
+    Multi = TypeVar("Multi", List[parameter], List[type(None)]) #Union[parameter, type(None)]])
+    return Generic[Multi]
+
+@_SpecialForm
+def readonly(self, parameter: Union[Any, None]):
+    __slots__ = ()
+    def __copy__(self):
+        return self
+    def __deepcopy__(self, memo):
+        return self
+
 def edgetype(cls=None, /, *, 
-        is_abstract: bool = False,
+        abstract: bool = False,
         extending: Tuple[Union[Any, None]] = (),
         init: bool = True,
         repr: bool = True,
@@ -217,9 +339,9 @@ def edgetype(cls=None, /, *,
         unsafe_hash: bool = False,
         frozen: bool = False):
     def wrap(cls):
-        return _proc(cls, is_abstract, extending, init, repr, eq, order, unsafe_hash, frozen)
+        return _proc(cls, abstract, extending, init, repr, eq, order, unsafe_hash, frozen)
 
-    # Check for `extending`, `is_abstract`, etc.
+    # Check for `extending`, `abstract`, etc.
     if cls is None:
         # We're called with parens.
         return wrap

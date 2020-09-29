@@ -1,3 +1,12 @@
-from edgemorph.adapter import edgetype
+from edgemorph.adapter import (
+        edgetype,
+        link,
+        multi,
+        property,
+        readonly,
+        # required,
+        single
+        )
 
-__all__ = ( "edgetype" )
+__all__ = ( "edgetype", "link", "multi", "property",
+        "single", "readonly", "required", )
