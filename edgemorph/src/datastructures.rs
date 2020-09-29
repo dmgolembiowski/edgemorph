@@ -306,16 +306,3 @@ pub trait FuncRet {
 pub trait FuncScope {
 
 }
-
-pub trait StructToSdl {
-
-}
-
-pub trait SdlToDdl {
-
-}
-
-pub trait DataToSchema {
-
-}
-
