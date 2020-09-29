@@ -65,7 +65,7 @@ Here are examples of what the compiler generates in Rust and Python given the Ed
 #### Rust API Output
 
 ```rust
-use crate::edm_user::{NamedType, UserType, HasAddressType};
+use ::edm_user::{NamedType, UserType, HasAddressType};
 use edgemorph::*;
 
 #[derive(NamedType)]
