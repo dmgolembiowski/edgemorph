@@ -23,7 +23,11 @@ from dataclasses import (
 import inspect
 import types
 from typing import ( Tuple, Union, Any, Generic, ForwardRef, TypeVar, List, NewType )
-
+"""
+Adapted from `dataclasses.py` and `typing.py` from the Python Software Foundation:
+    - https://github.com/python/cpython/blob/3.8/Lib/dataclasses.py
+    - https://github.com/python/cpython/blob/3.8/Lib//typing.py
+"""
 __all__ = ( 
         "edgetype",
         "link",
