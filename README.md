@@ -33,33 +33,27 @@ mod_directories   = [
     "<relative path to dirC>",
     "..."
 ]
-edgemorph_output  = [
-    [
-        "rust", [
-            ["module_file_A", "</path/to/output_A>.rs"]
-        ]
-    ],
-    [
-        "python", [
-            ["module_file_B", "</path/to/output_B>.py"],
-            ["module_file_C", "</path/to/output_C>.py"]
-        ]
-    ]
-]
+edgemorph_output  = {
+    rust = {
+        ["module_file_A", "</path/to/output_A>.rs"]
+    },
+    python = {
+        ["module_file_B", "</path/to/output_B>.py"],
+        ["module_file_C", "</path/to/output_C>.py"]
+    }
+}
 
 [edgedb]
-databases         = [ 
-    [
-        ["dsn", "<dsn_1>"], 
-        ["database", "<database_name_1>"], 
-        ["module", "<module_name_1>"]
-    ],
-    [
-        ["dsn", "<dsn_2>"], 
-        ["database", "<database_name_2>"], 
-        ["module", "<module_name_2>"]
-    ]
-]
+databases         = { 
+    database_name_1 = [{
+        dsn     = "<dsn_1>", 
+        modules = ["<module_name_a>"]
+    }],
+    database_name_2 = [{
+        dsn     = "<dsn_2>", 
+        modules = ["<module_name_b>", "<module_name_c>"]
+    }]
+}
 ```
 
 #### Rust API
