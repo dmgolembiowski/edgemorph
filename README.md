@@ -106,7 +106,7 @@ class HasAddress:
 
 @edgetype(extending=(Named, HasAddress))
 class User:
-    friends: multi[link[__qualname__]]
+    friends: multi[ link[__qualname__] ]
     index:   {
         "name": lambda title : "User name index"
     }
