@@ -56,7 +56,11 @@ databases         = {
 }
 ```
 
-Unlike traditional object-relational mappers, Edgemorph requires users to write database level code in EdgeQL (EdgeDB Query Language) so that it can be compiled into a bytecode library target. Additionally, the compiler returns pre-baked files in [any of the supported programming languages]() so that project-level code can communicate with EdgeDB databases using common ORM coding patterns. For instance, `edm compile -f user.edgeql` would compile the user module file and return both a library with a `.so` extension, in addition to files in [the supported language targets]() i.e. Rust, Python, or both, with typical ORM methods each of the types.
+Unlike traditional object-relational mappers, Edgemorph requires users to write database-level code. Using EdgeDB's rich query language, Edgemorph combines the strictly typed qualities of EdgeDB types with a powerful library-factory written in Rust. This unconventional strategy allows users to compile entirely custom bytecode libraries on a per-project basis, but continue to program in the stylings of a typical ORM.
+
+For instance, if we have an EdgeDB module within the `user.edgeql` file, then executing `edm compile -f user.edgeql` would compile the user module to return both a library with a `edm_user.so` extension as well as any application code files for calling these ORM methods. Currently, I am only planning to support Rust and Python  API outputs, however I would like JavaScript to join the adventure as well.
+
+Here are examples of what the compiler generates in Rust and Python given the EdgeQL above.
 
 #### Rust API Output
 
