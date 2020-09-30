@@ -1,0 +1,31 @@
+digraph edgemorph_development_manager {
+    edm_init -> edgemorph_toml [label="Initialize"];
+    edm_add -> edgemorph_toml [ label = "mod to" ];
+    edgemorph_toml -> mod_edgeql [ label = "then create" ];
+    edgemorph_toml -> edb_modules_dir [ label="tracking various"];
+    edm_make_install -> edm_test_connectivity;
+    edm_test_connectivity -> edgemorph_toml;
+    edm_test_connectivity -> exit_error [ label = "if conn failed" ];
+    edm_test_connectivity -> edm_make  [ label = "if conn succeeded" ];
+    edm_make -> edgemorph_toml;
+    edm_make -> mod_notfound [label = "but if"] ;
+    mod_notfound -> exit_error [label = "then"] ;
+    edm_make -> mod_edgeql [ label = "when found"];
+    mod_edgeql -> edm_compile [label="then"]; 
+    compile_failed -> exit_error [label = "unless"];
+    edm_init -> edm_add [label = "then" ];
+    edm_add;
+    exit_error;
+    compile_succeeded;
+    compile_failed;
+    edm_compile -> compile_failed;
+    edm_compile -> compile_succeeded;
+    edm_migrate;
+    compile_succeeded -> edm_migrate [label="then"];
+    mod_notfound;
+    edb_modules_dir;
+    edb_modules_dir -> mod_edgeql [label="containing"];
+    mod_edgeql;
+    edgemorph_toml;
+}
+
