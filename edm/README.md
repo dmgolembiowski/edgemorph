@@ -66,6 +66,6 @@ databases         = {
 ***
 
 * **`edm make install`** [ (_edb_module_)+ | * ]
-> _Checks `edgemorph.toml` for the `edgedb_ident` and `database_name` pairs associated with `edb_module`. Panics if these correspondences are not registered. Otherwise, runs `edm_test` for each of the relevant pairs. For each one that does not panic, this process starts a transaction with the databases and commits N migrations for each of the K-many SDL migrations stored in the `$project_root`._
+> _Checks `edgemorph.toml` for the `edgedb_ident` and `database_name` pairs associated with `edb_module`. Panics if these correspondences are not registered. Otherwise, runs `edm test ${edgedb_ident} ${database_name}` for each of the relevant pairs. For each one that does not panic, this process starts a transaction with the databases and commits N migrations for each of the K-many SDL migrations stored in the `$project_root`._
 
 ***
