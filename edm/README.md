@@ -52,7 +52,7 @@ databases         = {
 *** 
 
 * **`edm make`** [ _edb_module_ | * ]
-> _Retrieves each of the module files from `edgemorph.toml` and if `edb_module` is non-empty and in the set of registered modules, this call forwards the `edb_module` to the lower-level call `edm compile`. Alternatively, if `edb_module` is empty then this same procedure is done for each of the registered module files. If compilation is successful, this process writes a file to disk with the edgemorph-augmented SDL migration. Then, the command informs the user to run `edb make install` can be run to compile the EdgeQL source to local package targets. Otherwise, this process prints the syntactical errors emitted by `edgeql-parser` and exits._
+> _Retrieves each of the module files from `edgemorph.toml` and if `edb_module` is non-empty and in the set of registered modules, this call forwards the `edb_module` to the lower-level call `edm compile`. Alternatively, if `edb_module` is empty then this same procedure is done for each of the registered module files. If compilation is successful, this process writes a file to disk with the edgemorph-augmented SDL migration. Then, the command informs the user to run `edm make install` can be run to compile the EdgeQL source to local package targets. Otherwise, this process prints the syntactical errors emitted by `edgeql-parser` and exits._
 
 ***
 
