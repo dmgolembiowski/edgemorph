@@ -34,13 +34,13 @@ mod_directories   = [
     "..."
 ]
 edgemorph_output  = {
-    rust = {
+    rust = [
         ["module_file_A", "</path/to/output_A>.rs"]
-    },
-    python = {
+    ],
+    python = [
         ["module_file_B", "</path/to/output_B>.py"],
         ["module_file_C", "</path/to/output_C>.py"]
-    }
+    ]
 }
 
 [edgedb]
@@ -115,23 +115,3 @@ class User:
 ```
 
 In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
-
-### Installation
-
-(Installation steps for Rust-API)
-
-```
-_
-_
-_
-```
-
-(Installation steps for Python-API)
-
-```
-_
-_
-_
-```
-
-
