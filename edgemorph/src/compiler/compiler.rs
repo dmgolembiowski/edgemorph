@@ -84,7 +84,7 @@ trait CompilerCtx<'ctx, T, M>
 {
     fn new() -> CompilerCtx<'ctx, T>;
     fn push(&'ctx mut self, mode: Option<M>, prev_level: Option<T>) -> T;
-    fn _push(&'ctx mut self, mode: Option<M>, prev_level)
+    fn _push(&'ctx mut self, mode: Option<M>, prev_level);
 }
 
 struct CompilerContext<'lv, Lv, T> {
@@ -94,9 +94,7 @@ struct CompilerContext<'lv, Lv, T> {
 }
 
 impl<Lv> CompilerContext<Lv> {
-    pub fn new() -> CompilerContext {
-        
-    }
+    pub fn new() -> CompilerContext { // ... }
 }
 
 trait CtxLevel;
