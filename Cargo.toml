@@ -1,0 +1,2 @@
+[workspace]
+members = ["edm", "edgemorph", "edgemorph_derive"]

@@ -9,3 +9,4 @@ edition = "2018"
 derive_builder = "0.9.0"
 edgeql-parser = { git = "https://github.com/edgedb/edgedb", version = "0.1.0" }
 edgedb-protocol = { git = "https://github.com/edgedb/edgedb-rust", version = "0.1.0" }
+edgemorph = { path = "../edgemorph" }

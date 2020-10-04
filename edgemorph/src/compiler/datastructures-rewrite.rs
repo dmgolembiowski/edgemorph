@@ -2,15 +2,13 @@ use derive_builder::Builder;
 use std::rc::Weak;
 use std::cell::RefCell;
 use std::boxed::Box;
-use map_vec::Set;
-use std::mem::ManuallyDrop;
 
 #[derive(Debug, Clone, Default)]
 pub struct Module {}
 
 #[derive(Builder, Debug, Clone)]
 #[builder(build_fn(validate = "Self::validate"))]
-pub struct Type<'a, 'b, 'c, 'd> {
+pub struct Type<'a, 'b, 'c> {
 
     #[builder(setter(into))]
     pub ident:       String,
@@ -31,7 +29,7 @@ pub struct Type<'a, 'b, 'c, 'd> {
     pub annotations: Option<Box<Vec<Annotation>>>,
     
     #[builder(setter(into, strip_option), default)]
-    pub links:       Option<&'d [RefCell<Weak<Link<'d>>>]>,
+    pub links:       Option<&'a [RefCell<Weak<Link<'a>>>]>,
     
     #[builder(setter(into, strip_option), default)]
     pub constraints: Option<Box<Vec<Constraint>>>,
@@ -41,7 +39,7 @@ pub struct Type<'a, 'b, 'c, 'd> {
 
 }
 
-impl<'a, 'b, 'c, 'd> TypeBuilder<'a, 'b, 'c, 'd> {
+impl<'a, 'b, 'c> TypeBuilder<'a, 'b, 'c> {
     /// Verify that `self.ident` is not an empty `String`
     fn validate(&self) -> Result<(), String> {
         if self.ident.as_ref().unwrap().is_empty() {
@@ -73,7 +71,7 @@ impl AnnotationBuilder {
     }
 }
 
-pub type SuperType<'a, 'b, 'c, 'd> = Type<'a, 'b, 'c, 'd>;
+pub type SuperType<'a, 'b, 'c> = Type<'a, 'b, 'c>;
 pub type ArgSpec = Annotation;
 
 /// As I understand it, EdgeQL uses aliases as constructs
@@ -145,17 +143,40 @@ pub struct Property<'a> {
     #[builder(default = "false")]
     pub multi:      bool,
 
-    // Kind has the longest lifetime. It probably should be static.
-    // `'a` combines lifetime of `PropertyKind` and lifetimes of any
-    // abstract `Property` this might extend. It's a possible memory leak
-    // since any subtypes of an abstract Property might lead to references not
-    // long enough (yikes).
-    // I believe this could happen when some `Property`, p, 
-    // satisfies p.abs == false and `if let Some(P) = p.extends.unwrap()` where `P.kind`
-    // Some(P) where `P.kind` either == or != `self.kind`. If `self.kind != P.kind`, then 
-    // we're screwed.
-    pub kind:          &'a PropertyKind,
+    // Seems like this should be a Weak<PropertyKind>
+    // since we need to track ref counts without 
+    // introducing memory leaks; if so, then need to
+    // make a builder-setter that does:
+    /*
+    ```rust
+        use std::rc::{Rc, Weak};
+        // Then inside some builder function with a &mut self arg,
+        // we also pass an argument 
+        // resembling: `propkind: &'a PropertyKind` ... then inside
+        // that function's scope we do:
 
+        let pk: Weak<PropertyKind> = Rc::downgrade(propkind);
+        *self.kind = pk;
+    ```
+    */
+    // ToDo: update edgemorph_derive to handle simple Weak builder
+    pub kind:          &'a PropertyKind, // -> Weak<PropertyKind> 
+
+    // ToDo: Seems like this should be `Option<Rc<_>>` and
+    // if it's given to us by edm as `some_default: Option<&'a Rc<Expression>>` 
+    // (since mutability isn't needed). The reasoning is that each `default` then its edgemorph's job to make 
+    // (comparatively cheaper) 8-byte copies of a  footprint and clone a cheap ref to the fat pointer
+    // as:
+    // ```rust
+    //     match *some_default {
+    //         Some(propkind) => { 
+    //              *self.kind = Some(Rc::clone(propkind)) },
+    //         None           => { *self.kind = None }
+    //     }
+    // ```
+
+    //`to_owned()` (since the Expression is a singleton
+    // Expression on t)
     #[builder(setter(into, strip_option))]
     pub default:       Option<&'a Expression>,
 
@@ -265,7 +286,7 @@ pub struct Expression {
 ///    The expression may refer to the subject of 
 ///    the constraint as __subject__.
 type UsingExpression = Expression;
-// impl ManuallyDrop for Expression 
+
 #[derive(Builder, Debug, Clone)]
 pub struct Subcommand {
     
@@ -292,9 +313,9 @@ pub struct Index {
 }
 
 #[derive(Builder, Debug, Clone, PartialEq)]
-pub struct Function<'c, R, S> 
-    where R: FuncRet<'c>,
-          S: FuncScope + FuncRet<'c>
+pub struct Function<R, S> 
+    where R: FuncRet,
+          S: FuncScope + FuncRet
 {
     #[builder(setter(into))]
     pub ident: String,
@@ -303,31 +324,17 @@ pub struct Function<'c, R, S>
     pub args:  Option<Box<Vec<ArgSpec>>>,
 
     #[builder(setter(into, strip_option))]
-    pub ret_type: Option<Box<&'c R>>,
+    pub ret_type: Option<Box<R>>,
 
     #[builder(setter(strip_option))]
-    pub scope: Option<Box<&'c S>>
+    pub scope: Option<Box<S>>
 }
 
-/// `edgemorph::FuncRet<'c>`
-/// 
-/// `FuncRet<'c>` elides a second-order lifetime bound, such that
-/// `'c` must outlive both `'a`: the lifetime of both a `Type`'s or
-/// `Link`'s references to 
-pub trait FuncRet<'c> {
-    fn from<'a: 'c, 'b: 'c>(ty: &'c Type<'a, 'b, 'c>) -> Set<Type<'a, 'b, 'c>>;
-}
 
-#[repr(C)]
-pub union Statement {
-    pub(crate) uxpr: ManuallyDrop<UsingExpression>,
-    pub(crate) axpr: ManuallyDrop<AliasExpr>,
-    pub(crate) expr: ManuallyDrop<Expression>,
-    pub(crate) subc: ManuallyDrop<Subcommand>,
-    pub(crate) cons: ManuallyDrop<Constraint>
+pub trait FuncRet {
+
 }
 
 pub trait FuncScope {
-    fn from(stmts: &[Statement]) -> Vec<Box<Self>>;
-}
 
+}
