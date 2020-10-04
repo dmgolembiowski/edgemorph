@@ -22,7 +22,7 @@ pub struct Type<'a, 'b, 'c, 'd> {
     pub scalar:      bool,
     
     #[builder(setter(into, strip_option), default)]
-    pub extends:     Option<&'a [RefCell<Weak<SuperType<'b, 'c, 'c>>>]>,
+    pub extends:     Option<&'a [RefCell<Weak<SuperType<'b, 'c, 'c, 'd>>>]>,
 
     #[builder(setter(into, strip_option), default)]
     pub properties:  Option<Box<Vec<Property<'a>>>>,
@@ -292,9 +292,9 @@ pub struct Index {
 }
 
 #[derive(Builder, Debug, Clone, PartialEq)]
-pub struct Function<'c, R, S> 
-    where R: FuncRet<'c>,
-          S: FuncScope + FuncRet<'c>
+pub struct Function<'poly, R, S> 
+    where R: FuncRet<'poly>,
+          S: FuncScope + FuncRet<'poly>
 {
     #[builder(setter(into))]
     pub ident: String,
@@ -303,20 +303,22 @@ pub struct Function<'c, R, S>
     pub args:  Option<Box<Vec<ArgSpec>>>,
 
     #[builder(setter(into, strip_option))]
-    pub ret_type: Option<Box<&'c R>>,
+    pub ret_type: Option<Box<&'poly R>>,
 
     #[builder(setter(strip_option))]
-    pub scope: Option<Box<&'c S>>
+    pub scope: Option<Box<&'poly S>>
 }
 
 /// `edgemorph::FuncRet<'c>`
 /// 
-/// `FuncRet<'c>` elides a second-order lifetime bound, such that
-/// `'c` must outlive both `'a`: the lifetime of both a `Type`'s or
+/// `FuncRet<'poly>` elides a second-order lifetime bound, such that
+/// `'poly` must outlive both `'a + 'b + 'c`: the lifetime of both a `Type`'s or 
+/// `self.extends` supertype, in addition to `'d`
 /// `Link`'s references to 
-pub trait FuncRet<'c> {
-    fn from<'a: 'c, 'b: 'c>(ty: &'c Type<'a, 'b, 'c>) -> Set<Type<'a, 'b, 'c>>;
+pub trait FuncRet<'poly> {
+    fn from<'a: 'poly, 'b: 'poly, 'c: 'poly, 'd: 'poly>(ty: &'c Type<'a, 'b, 'c, 'd>) -> Set<Type<'a, 'b, 'c, 'd>>;
 }
+
 
 #[repr(C)]
 pub union Statement {
@@ -325,6 +327,18 @@ pub union Statement {
     pub(crate) expr: ManuallyDrop<Expression>,
     pub(crate) subc: ManuallyDrop<Subcommand>,
     pub(crate) cons: ManuallyDrop<Constraint>
+}
+
+impl Drop for Statement {
+    fn drop(&mut self) {
+        unsafe {
+            ManuallyDrop::drop(&mut self.cons);
+            ManuallyDrop::drop(&mut self.expr);
+            ManuallyDrop::drop(&mut self.subc);
+            ManuallyDrop::drop(&mut self.axpr);
+            ManuallyDrop::drop(&mut self.uxpr);
+        }
+    }
 }
 
 pub trait FuncScope {
