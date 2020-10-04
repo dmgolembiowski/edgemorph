@@ -65,6 +65,8 @@ Here are examples of what the compiler generates in Rust and Python given the Ed
 #### Rust API Output
 
 ```rust
+// user.rs
+
 use ::edm_user::{NamedType, UserType, HasAddressType};
 use edgemorph::*;
 
@@ -95,6 +97,8 @@ struct User {
 #### Python API Output
 
 ```python
+# user.py
+
 from edgemorph import ( edgetype, property, link, multi )
 from .edm_user import ( NamedType, HasAddressType, UserType )
 
