@@ -2,105 +2,120 @@ use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{parse_macro_input, parse_quote, Data, DeriveInput, Fields, GenericParam, Generics, Index};
+use std::cell::RefCell;
+use std::rc::Weak;
+use std::boxed::Box;
 
-/* These are just demo files stripped from https://github.com/dtolnay/syn/tree/master/examples/heapsize
-   to guide procedural macro creation in the main `edgemorph` directory.
-   Within there -- having `derive(Containerization)` will be useful 
-   for adding default `.to_boxed_vec()` and `.to_weak_refcell()` methods
-   available on generic types so that they can be easily reached from the
-   Builder_Derive macro arguments
-   */
-
-
-#[proc_macro_derive()]
-pub fn derive_heap_size(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Parse the input tokens into a syntax tree.
+#[proc_macro_derive(Containerize)]
+pub fn derive_containerize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-
-    // Used in the quasi-quotation below as `#name`.
     let name = input.ident;
-
-    // Add a bound `T: HeapSize` to every type parameter T.
     let generics = add_trait_bounds(input.generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    // Generate an expression to sum up the heap size of each field.
-    let sum = heap_size_sum(&input.data);
+    
+    // Generate expressions to apply new builder patterns
+    let tbv = make_box_vec(&input.data);
+    let twr = make_weak_refcell(&input.data);
+    let tb  = make_box(&input.data);
 
     let expanded = quote! {
-        // The generated impl.
-        impl #impl_generics heapsize::HeapSize for #name #ty_generics #where_clause {
-            fn heap_size_of_children(&self) -> usize {
-                #sum
+        // Expose containerization trait to the datastructures builder
+        impl #impl_generics edgemorph::Containerize for #name #ty_generics #where_clause {
+            fn to_box_vec(self) -> Box<Vec<Self>> {
+                #tbv
+            }
+            fn to_weak_refcell(self) -> RefCell<Weak<Self>> {
+                #twr
+            } 
+            fn to_box(self) -> Box<Self> {
+                #tb
             }
         }
     };
-
     // Hand the output tokens back to the compiler.
     proc_macro::TokenStream::from(expanded)
 }
 
-// Add a bound `T: HeapSize` to every type parameter T.
+// Add a bound `T: Containerize` to every type parameter T.
 fn add_trait_bounds(mut generics: Generics) -> Generics {
     for param in &mut generics.params {
         if let GenericParam::Type(ref mut type_param) = *param {
-            type_param.bounds.push(parse_quote!(heapsize::HeapSize));
+            type_param.bounds.push(parse_quote!(edgemorph::Containerize));
         }
     }
     generics
 }
 
-// Generate an expression to sum up the heap size of each field.
-fn heap_size_sum(data: &Data) -> TokenStream {
+// Generate an expression to return Box<Vec<Self>>
+fn make_box_vec(data: &Data) -> TokenStream {
     match *data {
         Data::Struct(ref data) => {
             match data.fields {
                 Fields::Named(ref fields) => {
-                    // Expands to an expression like
-                    //
-                    //     0 + self.x.heap_size() + self.y.heap_size() + self.z.heap_size()
-                    //
-                    // but using fully qualified function call syntax.
-                    //
-                    // We take some care to use the span of each `syn::Field` as
-                    // the span of the corresponding `heap_size_of_children`
-                    // call. This way if one of the field types does not
-                    // implement `HeapSize` then the compiler's error message
-                    // underlines which field it is. An example is shown in the
-                    // readme of the parent directory.
                     let recurse = fields.named.iter().map(|f| {
                         let name = &f.ident;
                         quote_spanned! {f.span()=>
-                            heapsize::HeapSize::heap_size_of_children(&self.#name)
+                            edgemorph::Containerize::to_box_vec(&self.#name)
                         }
                     });
                     quote! {
-                        0 #(+ #recurse)*
+                        #(#recurse)*
                     }
                 }
-                Fields::Unnamed(ref fields) => {
-                    // Expands to an expression like
-                    //
-                    //     0 + self.0.heap_size() + self.1.heap_size() + self.2.heap_size()
-                    let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
-                        let index = Index::from(i);
-                        quote_spanned! {f.span()=>
-                            heapsize::HeapSize::heap_size_of_children(&self.#index)
-                        }
-                    });
-                    quote! {
-                        0 #(+ #recurse)*
-                    }
-                }
-                Fields::Unit => {
-                    // Unit structs cannot own more than 0 bytes of heap memory.
-                    quote!(0)
-                }
+                _ => unimplemented!()
             }
         }
         Data::Enum(_) | Data::Union(_) => unimplemented!(),
     }
 }
+
+// Generate an expression to return Box<Vec<Self>>
+fn make_weak_refcell(data: &Data) -> TokenStream {
+    match *data {
+        Data::Struct(ref data) => {
+            match data.fields {
+                Fields::Named(ref fields) => {
+                    let recurse = fields.named.iter().map(|f| {
+                        let name = &f.ident;
+                        quote_spanned! {f.span()=>
+                            edgemorph::Containerize::to_weak_refcell(&self.#name)
+                        }
+                    });
+                    quote! {
+                        #(#recurse)*
+                    }
+                }
+                _ => unimplemented!()
+            }
+        }
+        Data::Enum(_) | Data::Union(_) => unimplemented!(),
+    }
+}
+
+
+// Generate an expression to return Box<Vec<Self>>
+fn make_box(data: &Data) -> TokenStream {
+    match *data {
+        Data::Struct(ref data) => {
+            match data.fields {
+                Fields::Named(ref fields) => {
+                    let recurse = fields.named.iter().map(|f| {
+                        let name = &f.ident;
+                        quote_spanned! {f.span()=>
+                            edgemorph::Containerize::to_box(&self.#name)
+                        }
+                    });
+                    quote! {
+                        #(#recurse)*
+                    }
+                }
+                _ => unimplemented!()
+            }
+        }
+        Data::Enum(_) | Data::Union(_) => unimplemented!(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
