@@ -8,7 +8,7 @@ _the command line tool for the edgemorph framework_
 ***
 
 * **`edm init`** [ _directory_name_ | _._ ] 
-> _Initializes an edgemorph project in the `directory_name` specified. If `directory_name` is neither empty nor the `.` character, and the directory does not already exist, then this call creates the directory. Otherwise, the current working directory is assigned by default. This value becomes the `project_root` variable. Next, the command creates the `edb_modules` folder under the `project_root`. Then, `$project_root/edb_modules/mod_${project_root}.edgeql` is created and pre-populated with:_
+> _Initializes an edgemorph project in the `directory_name` specified. If `directory_name` is neither empty nor the `.` character, and the directory does not already exist, then this call creates the directory. Otherwise, the current working directory is assigned by default. This value becomes the `project_root` variable. Next, the command creates the `edb_modules` folder under the `project_root`. Then, `$project_root/edb_modules/mod_${project_root}.esdl` is created and pre-populated with:_
 
 ```sql
 module ${project_root} {
@@ -28,10 +28,10 @@ mod_directories   = [
 ]
 edgemorph_output  = {
     rust = [
-        ["mod_${project_root}.edgeql", "${project_root}/src/lib/edm_${project_root_last_child}.rs"]
+        ["mod_${project_root}.esdl", "${project_root}/src/lib/edm_${project_root_last_child}.rs"]
     ],
     python = [
-        ["mod_${project_root}.edgeql", "${project_root}/${project_root_last_child}/edm_${project_root_last_child}.py"]
+        ["mod_${project_root}.esdl", "${project_root}/${project_root_last_child}/edm_${project_root_last_child}.py"]
     ]
 }
 
@@ -39,7 +39,7 @@ edgemorph_output  = {
 databases         = { 
     edgedb_primary = [{
         dsn     = "", 
-        modules = ["${project_root}/edb_modules/mod_${project_root}.edgeql"]
+        modules = ["${project_root}/edb_modules/mod_${project_root}.esdl"]
     }]
 }
 ```
