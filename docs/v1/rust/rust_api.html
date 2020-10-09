@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome file</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html"><h1 id="rust-api-part-1-v0.1.0">Rust API (part 1) v0.1.0</h1>
+<h4 id="example-of-an-edgedb-module-file-mod_app.esdl-">Example of an EdgeDB module file, <code>mod_app.esdl</code> :</h4>
+<pre class=" language-sql"><code class="prism  language-sql">module app {
+	<span class="token keyword">type</span> <span class="token keyword">User</span> {
+		property name <span class="token operator">-</span><span class="token operator">&gt;</span> str<span class="token punctuation">;</span>
+		property email <span class="token operator">-</span><span class="token operator">&gt;</span> str<span class="token punctuation">;</span>
+		multi link follows <span class="token operator">-</span><span class="token operator">&gt;</span> <span class="token keyword">User</span><span class="token punctuation">;</span>
+	}
+	<span class="token keyword">type</span> Photo {
+		required link author <span class="token operator">-</span><span class="token operator">&gt;</span> <span class="token keyword">User</span><span class="token punctuation">;</span>
+		required property uri <span class="token operator">-</span><span class="token operator">&gt;</span> str<span class="token punctuation">;</span>
+		multi property hashtags <span class="token operator">-</span><span class="token operator">&gt;</span> str<span class="token punctuation">;</span>  
+	}
+	<span class="token keyword">type</span> <span class="token keyword">Text</span> {
+		property title <span class="token operator">-</span><span class="token operator">&gt;</span> str<span class="token punctuation">;</span>
+		property body <span class="token operator">-</span><span class="token operator">&gt;</span> str<span class="token punctuation">;</span>
+	}
+    <span class="token keyword">function</span> get_longest_text<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> <span class="token keyword">set</span> <span class="token keyword">of</span> <span class="token keyword">Text</span> <span class="token keyword">using</span> <span class="token punctuation">(</span>
+        <span class="token keyword">Text</span> {
+            title<span class="token punctuation">,</span>
+            body<span class="token punctuation">,</span>
+            len_body :<span class="token operator">=</span> <span class="token function">len</span><span class="token punctuation">(</span><span class="token punctuation">.</span>body<span class="token punctuation">)</span><span class="token punctuation">,</span>
+            above_avg :<span class="token operator">=</span> <span class="token function">len</span><span class="token punctuation">(</span><span class="token punctuation">.</span>body<span class="token punctuation">)</span> <span class="token operator">&gt;=</span> math<span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token function">len</span><span class="token punctuation">(</span>DETACHED <span class="token keyword">Text</span><span class="token punctuation">.</span>body<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        }<span class="token punctuation">;</span>
+    <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+}
+</code></pre>
+<hr>
+<h4 id="table-of-equivalent-rust-apis">Table of Equivalent Rust APIs</h4>
+<hr>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th>EdgeQL</th>
+<th>Rust API (Blocking) Codegen</th>
+<th>Rust API (Async/Await) Codegen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Select</td>
+<td><pre><code>WITH MODULE app<br>SELECT User {<br>    name,<br>    email,<br>    follows: {<br>        name,<br>        email<br>    }<br>} FILTER .email = ‘alice@tutorial.com’;</code></pre></td>
+<td><pre><code>use crate::edm_app::*;<br>let mut user = User::edb()<br>        .name()<br>        .email(<a href="mailto:%22alice@tutorial.com">"alice@tutorial.com</a>")<br>        .follows(multi_link!{<br>            .name()<br>            .email()<br>         })<br>        .select().block()<br>        .wait()?;<br></code></pre></td>
+<td><pre><code>use crate::edm_app::*;<br>let mut user = User::edb()<br>        .name()<br>        .email(<a href="mailto:%22alice@tutorial.com">"alice@tutorial.com</a>")<br>        .follows(multi_link!{<br>            .name()<br>            .email()<br>        })<br>        .select().no_block()<br>        .await?;<br></code></pre></td>
+</tr>
+<tr>
+<td>Select Subset Filter</td>
+<td><pre><code>WITH MODULE app<br>SELECT Photo {<br>    author: {<br>        name,<br>        email<br>    },<br>    url,<br>    hashtags<br>} FILTER .hashtags IN {‘kittens’, ‘puppies’};</code></pre></td>
+<td><pre><code>use crate::edm_app::*;<br>let mut photos = Photo::edb()<br>        .author( single_link! {<br>            .name()<br>            .email()<br>        })<br>        .uri()<br>        .hashtags( subset_of![“kittens”, “puppies”] )<br>        .select().block()<br>        .wait()?;</code></pre></td>
+<td><pre><code>use crate::edm_app::*;<br>let mut photos = Photo::edb()<br>        .author(single_link! {<br>            .name()<br>            .email()<br>        })<br>        .uri()<br>        .hashtags( subset_of![“kittens”, “puppies”] )<br>        .select().no_block()<br>        .await?;</code></pre></td>
+</tr>
+<tr>
+<td>Select Computable</td>
+<td><pre><code>WITH MODULE app<br>SELECT Text {<br>    title,<br>    body,<br>    len_body := len(.body)<br>};</code></pre></td>
+<td><pre><code>use crate::edm_app::*;<br>let mut photos = Text::edb()<br>        .title()<br>        .body()<br>        .extend_iter( inject! {<br>            .len_body(#body.count())<br>        })<br>        .select().block()<br>        .wait()?;<br></code></pre></td>
+<td><pre><code>use crate::edm_app::*;<br>let mut photos = Text::edb()<br>        .title()<br>        .body()<br>        .extend_iter( inject! {<br>            .len_body(#body.count())<br>        })<br>        .select().no_block()<br>        .await?;<br></code></pre></td>
+</tr>
+<tr>
+<td>Select Detached Computable</td>
+<td><pre><code>WITH MODULE app<br>SELECT Text {<br>    title,<br>    body,<br>    len_body := len(.body),<br>    above_avg := len(.body) &gt;= math.mean(<br>        len(DETACHED Text.body))<br>};</code></pre></td>
+<td><em><code>DETACHED</code> will not be supported in Edgemorph for performance reasons. Prepare SDL functions instead and call them directly:</em> <br> <pre><code>use crate::edm_app::*;<br>let mut docs = App::get_longest_text()<br>                .block()<br>                .wait()?;</code></pre></td>
+<td><em><code>DETACHED</code> will not be supported in Edgemorph for performance reasons. Prepare SDL functions instead and call them directly:</em> <br><pre><code>use crate::edm_app::*;<br>let mut docs = App::get_longest_text()<br>                .no_block()<br>                .await?;</code></pre></td>
+</tr>
+</tbody>
+</table></div>
+</body>
+
+</html>
