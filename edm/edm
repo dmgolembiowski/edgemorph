@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+
+'''
+This is a Python prototype of the EDM compiler.
+To quickly iterate on the design of `edm`, this pseudo-compiler
+bootlegs the official EdgeDB lexer to validate SDL grammar.
+'''
+import argparse 
+from edb.edgeql import parser as qlparser
+import sys
+from typing import *
+from pathlib import (Path,)
+
+class Ok:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.__dict__.update(kwargs)
+
+class IOResult:
+    def __init__(self, found: bool, *annotation: Optional[str]) -> None:
+        self.annotation: Optional[str] = annotation
+        self.found: bool = found
+        
+def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
+    """init
+    ToDo
+    """
+    # Initializing some variables
+    project_root: str
+    path: Path
+    exit_status: Union[Path, Exception]
+    loc = loc.rstrip('/')
+
+    # Create the project directory
+    if (path := Path(loc)).exists():
+        pass
+    else:
+        path.mkdir(parents=True, exist_ok=True)
+
+    # Need to check this directory for an `edgemorph.toml`
+    edm_conf = check_for_edgemorph(path)
+    if edm_conf.found:
+        exit_status = Exception(f"Project already exists in {loc}")
+        return exit_status
+
+    # Create edgemorph-framework files and directories
+    project_dir  = path.absolute()
+    project_root = project_dir.stem
+    project_dir  = str(project_dir)
+
+    # Starting with `edgemorph.toml`
+    file_content: str = build_toml(project_root)
+    with open(project_dir+"/edgemorph.toml", "w") as f:
+        f.write(file_content)
+
+    # Make the default modules/output folder(s)
+    Path(f"{project_dir}/edb_modules").mkdir()
+    Path(f"{project_dir}/{project_root}").mkdir() # Python
+
+    # Make the default SDL module file
+    with open(f"{project_dir}/edb_modules/mod_{project_root}.esdl", "w") as f:
+        stream = f"module {project_root} {{ }}"
+        f.write(stream)
+
+def build_toml(project_root: str) -> str:
+    return f'''[edgemorph]
+enable_rs_binding = "true"
+enable_py_binding = "true"
+project_root      = ["{project_root}"]
+mod_directories   = [
+    "{project_root}/edb_modules"
+]
+edgemorph_output  = {{
+    rust = [
+        ["mod_{project_root}.esdl", "{project_root}/src/lib/edm_{project_root}.rs"]
+    ],
+    python = [
+        ["mod_{project_root}.esdl", "{project_root}/{project_root}/edm_{project_root}.py"]
+    ]
+}}
+
+[edgedb]
+databases         = {{ 
+    edgedb_primary = [{{
+        dsn     = "", 
+        modules = ["{project_root}/edb_modules/mod_{project_root}.esdl"]
+    }}]
+}}'''
+
+
+def check_for_edgemorph(path: Path) -> IOResult:
+    exit_status: IOResult
+    # edm_toml = sorted(path.glob("/edgemorph.toml"))
+    # found = next(edm_toml)
+    if Path(str(path)+"/edgemorph.toml").exists():
+        exit_status = IOResult(found=True)
+        return exit_status
+    else:
+        exit_status = IOResult(found=False)
+    return exit_status
+
+def main(args: argparse.Namespace):
+    # ToDo: Replace this with `match - case` from PEP 622
+    arg = next(iter(vars(args)))
+    # ToDo: Replace this lazy abomination
+    func_name = arg[4:]
+    arg = vars(args).get(arg)
+    eval(f"{func_name}(arg)")
+
+if __name__ == "__main__":
+    
+    lastarg = sys.argv[-1]
+    if len(sys.argv) > 1 and lastarg[0] != '-':
+        sys.argv[-1] = '-f'
+        sys.argv.append(lastarg)
+
+    # The primary argument parser
+    edm_parser = argparse.ArgumentParser(
+            prog="edm: edgemorph development manager (Python bootstrap)"
+    )
+    
+    # Auxillary parsers beneath `edm_parser`
+    subparser   = edm_parser.add_subparsers(help="edm help")
+    edm_init    = subparser.add_parser("init", help="init help")
+    edm_add     = subparser.add_parser("add", help="add help")
+    edm_make    = subparser.add_parser("make", help="make help")
+    make_subparsers = edm_make.add_subparsers()
+    edm_make_install = make_subparsers.add_parser("install")
+    edm_compile = subparser.add_parser("compile", help="compile help")
+    edm_test    = subparser.add_parser("test", help="test help")
+
+    # `edm init $2`
+    edm_init.add_argument('-f', default='.', dest='edm_init')
+
+    # `edm add $2`
+    edm_add.add_argument('-f', dest='edm_add')
+    edm_add.add_argument('-a', default='.', dest='edm_add_all')
+
+    # `edm make`: '.' means ./*.esdl ; '*' means **/*.esdl
+    edm_make.add_argument('-f', default='*', dest='edm_make')
+
+    # `edm make install` (same as edm make)
+    edm_make_install.add_argument('-f', default='*', dest='edm_make_install', nargs='*')
+
+    # `edm compile`
+    edm_compile.add_argument('-f', dest='edm_compile')
+
+    # `edm test`: '*' means all database connections in edgemorph.toml
+    edm_test.add_argument('-f', default='*', dest='edm_test', nargs='*')
+
+    args = edm_parser.parse_args()
+    main(args)    
