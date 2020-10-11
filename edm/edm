@@ -5,13 +5,34 @@ This is a Python prototype of the EDM compiler.
 To quickly iterate on the design of `edm`, this pseudo-compiler
 bootlegs the official EdgeDB lexer to validate SDL grammar.
 '''
+import IPython
+import subprocess
+import os
 import argparse 
-from edb.edgeql import parser as qlparser
 import sys
 from typing import *
 from pathlib import (Path,)
+from functools import wraps
+import heapq
+from copy import copy
+# These were added because `edb` is not 
+# a public-facing package. In the future
+# these shims can be removed since 
+# "... [edgedb author(s)] might want to 
+#      make "edb" a namespace
+#      package at some point."
+global INITIAL_WORKING_DIRECTORY
+global EDM_PATH
+global EDB_MODULE_DIRECTORY
+global qlparser
+
+__datastore__ = {}
 
 class Ok:
+    """Ok
+
+    This class emulates the Ok slice in Rust's `Result` enum.
+    """
     def __init__(self, *args, **kwargs):
         self.args = args
         self.__dict__.update(kwargs)
@@ -20,10 +41,22 @@ class IOResult:
     def __init__(self, found: bool, *annotation: Optional[str]) -> None:
         self.annotation: Optional[str] = annotation
         self.found: bool = found
-        
+
 def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     """init
-    ToDo
+
+    This function initializes an edgemorph project.
+    For the full explanation, see 
+    https://github.com/dmgolembiowski/edgemorph/tree/master/edm#formal-specification
+    
+    PARAMETERS
+    - loc: Optional[str] = '.' 
+        This parameter is the location on the filesystem where edgemorph
+        projects can be initialized. The default value is the current
+        working directory.
+
+    RETURN
+    - Union[Ok, Exception]: The result of the project creation command.
     """
     # Initializing some variables
     project_root: str
@@ -40,8 +73,10 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     # Need to check this directory for an `edgemorph.toml`
     edm_conf = check_for_edgemorph(path)
     if edm_conf.found:
-        exit_status = Exception(f"Project already exists in {loc}")
-        return exit_status
+        exit_status = '\033[91m'+f"Error: Project already exists in {path.resolve()}"+'\033[0m'
+        # Prefer to not dump a bunch of traceback
+        print(exit_status)
+        sys.exit(1)
 
     # Create edgemorph-framework files and directories
     project_dir  = path.absolute()
@@ -55,12 +90,174 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
 
     # Make the default modules/output folder(s)
     Path(f"{project_dir}/edb_modules").mkdir()
-    Path(f"{project_dir}/{project_root}").mkdir() # Python
+    Path(f"{project_dir}/edm_{project_root}").mkdir()
 
     # Make the default SDL module file
     with open(f"{project_dir}/edb_modules/mod_{project_root}.esdl", "w") as f:
-        stream = f"module {project_root} {{ }}"
+        stream = f"""module {project_root} {{
+
+}}"""
         f.write(stream)
+        sys.stdout.write("\033[;1m")
+        print(f"Success! Your project was created at {project_dir}")
+
+def make(target: str):
+    files: Box = find_edgemorph_toml()
+    print(files.unwrap().pop()[1].__str__())
+    sys.exit()
+
+class Box:
+    def __init__(self, ty: Any):
+        self.ty = ty
+    def unwrap(self):
+        if self.ty is not None:
+            return self.ty
+        else:
+            raise TypeError("This is a bug. Please report this at https://github.com/dmgolembiowski/edgemorph/issues")
+
+def memcache(key: str, value: Optional[Box]) -> Optional[Box]:
+    """Uses the `__datastore__` for allocating
+    `Box` instances."""
+    if key not in __datastore__ and value is not None:
+        __datastore__[key] = value
+    elif value is None:
+        return None
+    return __datastore__[key]
+
+
+class Entry:
+    def __init__(self, loc: Path) -> None:
+        self.loc: Path = loc
+    def __str__(self) -> str:
+        return f"{str(self.loc)}"
+
+def find_edgemorph_toml(depth_limit: int = 3) -> Box:
+    """find_edgemorph_toml
+
+    This function scans the surrounding neighborhood
+    for a potential configuration file. It imagines that
+    the user will try to invoke an edm command 
+    in one of the possible locations:
+    - The top level project directory `project_root`;
+        .
+        ├── Cargo.toml
+        ├── edb_modules
+        │   ├── backend
+        │   │   ├── mod_databases.esdl
+        │   │   ├── mod_load_balancer.esdl
+        │   │   └── mod_network.esdl
+        │   ├── frontend
+        │   │   ├── mod_api_v1.esdl
+        │   │   └── mod_api_v2.esdl
+        │   └── mod_app.esdl
+        ├── edgemorph.toml
+        ├── edm_app
+        └── src
+            └── main.rs
+    
+    - Under `edb_modules` or any of its branches:
+        .
+        ├── backend
+        │   ├── mod_databases.esdl
+        │   ├── mod_load_balancer.esdl
+        │   └── mod_network.esdl
+        ├── frontend
+        │   ├── mod_api_v1.esdl
+        │   └── mod_api_v2.esdl
+        └── mod_app.esdl
+    
+    - Or under one of the two directories where native codegen
+      files are written:
+        ├── edm_app
+        └── src
+            └── main.rs
+
+    Using this heuristic, this function will check in the order of
+    0 levels higher, 1 level higher, and then 2 levels higher for a
+    file named `edgemorph.toml`. Other checks for corner cases are
+    implemented as well.
+    """
+    # Try lazily loading this first
+    stored: Box
+    if (stored := memcache("edgemorph.toml", None)) is not None:
+        return stored
+
+    # Initialize some variables
+    dirs_walked: int = 0
+    path: Path
+    found = []
+    entry: Entry
+
+    # But first, check if this has already ran
+    
+    class Prefix:
+        def __init__(self, initial_mark: str = "") -> None:
+            self.mark: str = initial_mark
+        def prepend(self) -> None:
+            self.mark = "../" + self.mark
+        def __str__(self) -> str:
+            return self.mark
+
+    prefix: Prefix = Prefix()
+    
+    def traverse(toml: Path) -> Union[Callable, None]:
+        nonlocal depth_limit
+        nonlocal dirs_walked
+        nonlocal found
+        nonlocal entry
+        nonlocal prefix
+        path: Path
+        if depth_limit - dirs_walked > 0:
+            path = Path(str(prefix) + str(toml))
+            if path.exists():
+                entry = Entry(path)
+                heapq.heappush(found, (depth_limit - dirs_walked, entry))
+            dirs_walked += 1
+            prefix.prepend()
+            return traverse(toml)
+        else:
+            return None
+    
+    # Prepare a priority queue of the possible `edgemorph.toml` locations.
+    # `Entry`s are ranked by an inverse proximity score.
+    traverse(Path("./edgemorph.toml"))
+    
+    # For some additional checks
+    pref: (int, Entry)
+    slice_idx: int
+    path_idx: Union[int, str]
+
+    try:
+        pref = heapq.heappop(found)
+    except IndexError:
+        print("`edgemorph.toml` not found. Try running `edm init <project name>`")
+        sys.exit(1)
+    heapq.heappush(found, copy(pref))
+    
+    if len(found) > 1:
+        CRED: str= '\033[91m'
+        CEND: str = '\033[0m'
+        msg: str = "Multiple `" + CRED \
+                + "edgemorph.toml" + CEND \
+                + "` files were detected:"
+        for slice_idx in range(len(found)):
+            print(f"  {slice_idx + 1}) {str(found[slice_idx][1].loc.resolve().absolute())}")
+        while True:
+            path_idx = input("\nPlease indicate which file to use: ")
+            try:
+                path_idx = int(path_idx)
+            except ValueError:
+                continue
+            try:
+                pref = found[path_idx]
+            except IndexError:
+                continue
+            break
+
+    # Store this in a cache for later retrieval
+    stored = memcache("edgemorph.toml", Box([pref]))
+    
+    return stored
 
 def build_toml(project_root: str) -> str:
     return f'''[edgemorph]
@@ -88,10 +285,9 @@ databases         = {{
 }}'''
 
 
+
 def check_for_edgemorph(path: Path) -> IOResult:
     exit_status: IOResult
-    # edm_toml = sorted(path.glob("/edgemorph.toml"))
-    # found = next(edm_toml)
     if Path(str(path)+"/edgemorph.toml").exists():
         exit_status = IOResult(found=True)
         return exit_status
@@ -102,13 +298,85 @@ def check_for_edgemorph(path: Path) -> IOResult:
 def main(args: argparse.Namespace):
     # ToDo: Replace this with `match - case` from PEP 622
     arg = next(iter(vars(args)))
-    # ToDo: Replace this lazy abomination
-    func_name = arg[4:]
+    
+    # Extract the necessary destinations and arguments
+    func_name = arg
     arg = vars(args).get(arg)
-    eval(f"{func_name}(arg)")
+
+    # This can be made more secure by enforcing known
+    # function targets. For example:
+    permitted = {
+        "init",
+        "add", 
+        "make",
+        "compile",
+        "test",
+        "make_install"
+    }
+    if func_name in permitted:
+        eval(f"{func_name}(arg)")
+    else:
+        raise(ValueError(f"{func_name} is not available."))
+
+def run_once(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            result = f(*args, **kwargs)
+            wrapper.has_run = True
+            return result
+    wrapper.has_run = False
+    return wrapper
+
+@run_once
+def import_edb():
+    try:
+        # To import the bootstrapped `edb.edgeql.parser` we trick the Python
+        # importlib loader into checking foreign sources.
+        os.chdir(EDB_MODULE_DIRECTORY)
+        from edb.edgeql import (parser,)
+    
+        # In the future, it could be possible to simply run
+        # `from edb.graphql import parser as qlparser`; but for
+        # the time being, that is not available
+        qlparser = parser
+        
+        # Return home
+        os.chdir(INITIAL_WORKING_DIRECTORY)
+    except Exception as e:
+        raise(e)
+
+def usage():
+    return '''usage: edm { positional argument } { argument value }
+
+positional arguments:
+    help                shows this message
+    init                initializes a new edgemorph project
+    add                 creates a new module file and/or updates `edgemorph.toml` 
+    make                high-level utility for AST checking and generating artifacts
+    make install        migrate the schema to an EdgeDB instance
+    compile             low-level utility for AST checking
+    test                test connectivity to an `edgemorph.toml` registered database
+
+argument values:
+    init                [ directory_name | . ]
+    add                 [ new_module ] 
+    make                [ edb_module | * ]
+    make install        [ (edb_module)+ | * ]
+    compile             [ edb_module_path ]
+    test                [ database_name ]'''
 
 if __name__ == "__main__":
     
+    # These are unhealthy shims that can be removed in the future
+    INITIAL_WORKING_DIRECTORY = os.getcwd()
+    EDM_PATH = os.path.dirname(os.path.realpath(__file__))
+    EDB_MODULE_DIRECTORY = f"{EDM_PATH}/bootstrap/edgedb"
+    import_edb()
+
+    # This shim may be a source of errors in the future. 
+    # Currently, it is responsible for allowing the argument
+    # parser to allow argument names to not use dashed names
     lastarg = sys.argv[-1]
     if len(sys.argv) > 1 and lastarg[0] != '-':
         sys.argv[-1] = '-f'
@@ -116,37 +384,43 @@ if __name__ == "__main__":
 
     # The primary argument parser
     edm_parser = argparse.ArgumentParser(
-            prog="edm: edgemorph development manager (Python bootstrap)"
-    )
+            prog="edm",
+            usage=usage()
+            )
     
     # Auxillary parsers beneath `edm_parser`
-    subparser   = edm_parser.add_subparsers(help="edm help")
-    edm_init    = subparser.add_parser("init", help="init help")
-    edm_add     = subparser.add_parser("add", help="add help")
-    edm_make    = subparser.add_parser("make", help="make help")
-    make_subparsers = edm_make.add_subparsers()
+    subparser   = edm_parser.add_subparsers()
+    edm_init    = subparser.add_parser("init")
+    edm_add     = subparser.add_parser("add")
+    edm_make    = subparser.add_parser("make")
+    make_subparsers = edm_make.add_subparsers(dest="make install")
     edm_make_install = make_subparsers.add_parser("install")
-    edm_compile = subparser.add_parser("compile", help="compile help")
-    edm_test    = subparser.add_parser("test", help="test help")
+    edm_compile = subparser.add_parser("compile")
+    edm_test    = subparser.add_parser("test")
 
-    # `edm init $2`
-    edm_init.add_argument('-f', default='.', dest='edm_init')
+    # `edm init`
+    edm_init.add_argument('-f',  dest='init', default=".", metavar="PROJECT_DIR")
 
-    # `edm add $2`
-    edm_add.add_argument('-f', dest='edm_add')
-    edm_add.add_argument('-a', default='.', dest='edm_add_all')
+    # `edm add`
+    edm_add.add_argument('-f', dest='add', default=".", metavar="MODULE_FILE")
 
     # `edm make`: '.' means ./*.esdl ; '*' means **/*.esdl
-    edm_make.add_argument('-f', default='*', dest='edm_make')
+    edm_make.add_argument('-f', 
+            default="*",
+            dest='make', 
+            nargs='*', 
+            metavar="SOURCE")
 
-    # `edm make install` (same as edm make)
-    edm_make_install.add_argument('-f', default='*', dest='edm_make_install', nargs='*')
+    # `edm make install`
+    edm_make_install.add_argument('-f', dest='make_install', nargs='*', metavar="SOURCE")
 
     # `edm compile`
-    edm_compile.add_argument('-f', dest='edm_compile')
+    edm_compile.add_argument('-f', dest='compile', metavar="SOURCE")
 
     # `edm test`: '*' means all database connections in edgemorph.toml
-    edm_test.add_argument('-f', default='*', dest='edm_test', nargs='*')
+    edm_test.add_argument('-f', dest='test', nargs='*', metavar="MODULE DATABASE_IDENTITY")
 
-    args = edm_parser.parse_args()
-    main(args)    
+    args, unknown = edm_parser.parse_known_args()
+    # print(f"args: {args}")
+    # print(f"unknown: {unknown}")
+    main(args)
