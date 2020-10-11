@@ -47,7 +47,7 @@ name = ""
 dsn = ""
 
 [edgedb.databases.edgedb_primary.modules]
-{project_root} = "/edb_modules/mod_{project_root}.esdl"
+some_identifier = "/edb_modules/mod_{project_root}.esdl"
 ```
 
 ***
