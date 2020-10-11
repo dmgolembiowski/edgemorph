@@ -102,8 +102,9 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
         print(f"Success! Your project was created at {project_dir}")
 
 def make(target: str):
+    print("Running make....")
     files: Box = find_edgemorph_toml()
-    print(files.unwrap().pop()[1].__str__())
+    print(f"DEBUG: Using {files.unwrap().pop()[1].__str__()}")
     sys.exit()
 
 class Box:
@@ -129,7 +130,7 @@ class Entry:
     def __init__(self, loc: Path) -> None:
         self.loc: Path = loc
     def __str__(self) -> str:
-        return f"{str(self.loc)}"
+        return f"{str(self.loc.resolve().absolute())}"
 
 def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     """find_edgemorph_toml
@@ -188,8 +189,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     found = []
     entry: Entry
 
-    # But first, check if this has already ran
-    
+    # A singleton type for prepending relative paths
     class Prefix:
         def __init__(self, initial_mark: str = "") -> None:
             self.mark: str = initial_mark
@@ -241,6 +241,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
                 + "edgemorph.toml" + CEND \
                 + "` files were detected:"
         for slice_idx in range(len(found)):
+            # ToDo: Impove this line's readability
             print(f"  {slice_idx + 1}) {str(found[slice_idx][1].loc.resolve().absolute())}")
         while True:
             path_idx = input("\nPlease indicate which file to use: ")
@@ -294,14 +295,29 @@ def check_for_edgemorph(path: Path) -> IOResult:
     else:
         exit_status = IOResult(found=False)
     return exit_status
+def make_install(args):
+    print("Running make install....")
+
+def add(args):
+    print("Running add.....")
+
+def compile(args):
+    print("Compiling....")
+
+def test(args):
+    print("Testing connectivity...")
 
 def main(args: argparse.Namespace):
     # ToDo: Replace this with `match - case` from PEP 622
-    arg = next(iter(vars(args)))
+    func_name = next(iter(vars(args)))
     
     # Extract the necessary destinations and arguments
-    func_name = arg
-    arg = vars(args).get(arg)
+    if func_name == "make":
+        if vars(args).get("make") == ["install"] \
+                or "make_install" in vars(args):
+            func_name = "make_install"
+
+    arg = vars(args).get(func_name)
 
     # This can be made more secure by enforcing known
     # function targets. For example:
@@ -313,10 +329,25 @@ def main(args: argparse.Namespace):
         "test",
         "make_install"
     }
+    '''Not needed yet
+    zero_or_one = set((0, 1))
+    many = set((i for i in range(1,999)))
+
+    option_cardinality = {
+        "init": zero_or_one,
+        "add": many,
+        "make": many,
+        "compile": many,
+        "test": many,
+        "make_install": many
+    }
+    '''
     if func_name in permitted:
         eval(f"{func_name}(arg)")
     else:
-        raise(ValueError(f"{func_name} is not available."))
+        msg: str ='\033[91m'+f"{func_name} is not available."+'\033[0m'
+        print(msg)
+        sys.exit(1)
 
 def run_once(f):
     @wraps(f)
@@ -364,7 +395,9 @@ argument values:
     make                [ edb_module | * ]
     make install        [ (edb_module)+ | * ]
     compile             [ edb_module_path ]
-    test                [ database_name ]'''
+    test                [ database_name ]
+
+'''
 
 if __name__ == "__main__":
     
@@ -393,7 +426,7 @@ if __name__ == "__main__":
     edm_init    = subparser.add_parser("init")
     edm_add     = subparser.add_parser("add")
     edm_make    = subparser.add_parser("make")
-    make_subparsers = edm_make.add_subparsers(dest="make install")
+    make_subparsers = edm_make.add_subparsers()
     edm_make_install = make_subparsers.add_parser("install")
     edm_compile = subparser.add_parser("compile")
     edm_test    = subparser.add_parser("test")
@@ -402,17 +435,21 @@ if __name__ == "__main__":
     edm_init.add_argument('-f',  dest='init', default=".", metavar="PROJECT_DIR")
 
     # `edm add`
-    edm_add.add_argument('-f', dest='add', default=".", metavar="MODULE_FILE")
+    edm_add.add_argument('-f', dest='add', metavar="MODULE_FILE")
 
     # `edm make`: '.' means ./*.esdl ; '*' means **/*.esdl
     edm_make.add_argument('-f', 
-            default="*",
-            dest='make', 
+            default="./*",
+            dest='make',
             nargs='*', 
             metavar="SOURCE")
 
     # `edm make install`
-    edm_make_install.add_argument('-f', dest='make_install', nargs='*', metavar="SOURCE")
+    edm_make_install.add_argument('-f', 
+            dest='make_install', 
+            default='./*',
+            nargs='*', 
+            metavar="SOURCE")
 
     # `edm compile`
     edm_compile.add_argument('-f', dest='compile', metavar="SOURCE")
@@ -421,6 +458,4 @@ if __name__ == "__main__":
     edm_test.add_argument('-f', dest='test', nargs='*', metavar="MODULE DATABASE_IDENTITY")
 
     args, unknown = edm_parser.parse_known_args()
-    # print(f"args: {args}")
-    # print(f"unknown: {unknown}")
     main(args)
