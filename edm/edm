@@ -5,6 +5,8 @@ This is a Python prototype of the EDM compiler.
 To quickly iterate on the design of `edm`, this pseudo-compiler
 bootlegs the official EdgeDB lexer to validate SDL grammar.
 '''
+from pprint import pprint
+from time import sleep
 import toml
 import subprocess
 import os
@@ -84,7 +86,11 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     project_dir  = str(project_dir)
 
     # Starting with `edgemorph.toml`
-    file_content: str = build_toml(project_root)
+    sys.stdout.write("\033[;1m")
+    print("Initializing your new Edgemorph project!")
+    schema: str = input("Enter your project's schema name (or default to `Edgemorph`): ")
+
+    file_content: str = build_toml(project_root, schema)
     with open(project_dir+"/edgemorph.toml", "w") as f:
         f.write(file_content)
 
@@ -102,12 +108,43 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
         print(f"Success! Your project was created at {project_dir}")
 
 def make(target: str):
-    print("Running make....")
     files: Box = find_edgemorph_toml()
     path: Path = files.unwrap().pop()[1].loc
-    #print(f"DEBUG: Using {files.unwrap().pop()[1].__str__()}")
+    print(path)
     edm_toml = load_edgemorph_toml(path)
-    print(edm_toml)
+    try:
+        assert edm_toml is not None
+    except AssertionError:
+        msg: str ='\033[91m'+f"ERROR: `edgemorph.toml` not found."+'\033[0m'
+        print(msg)
+        sys.exit(1)
+
+    '''
+    First order of business is to case out the argument supplied to `make`;
+    if it's (*), then `make` all of the modules.
+
+    These are determined by recursively exploring `edgedb.databases.[X].modules`.
+    
+    Otherwise, perform a single `make` on `target` = `Y` where `Y` is valid for
+    `edgedb.databases.[X].modules.[Y].
+    
+    When `target` == '*', get all `*.esdl` files in `edgemorph.toml` and
+    1) check for their existence on the filesystem
+    [1) compare the diffs of of files for each extant on the filesystem]
+    2) if any are missing, note it, but do not exit
+    3) do: parse -> (analyze) -> compile for the available paths
+    [3) Recompile/Analyze only those that have changed.]
+
+    When `target` == `mod_<something>.esdl`, or simply `mod_something`,
+    we search for it in `edm_toml["edgedb"]["databases"][X]["modules"]
+    where `X` is any of the valid database names.
+
+    Note: ToDo items are enclosed in square brackets "[" and "]".
+    These are future enhancements that will involve incremental compilation,
+    rather than the single-pass implementation.
+    '''
+    pprint(edm_toml)
+    print(f"target: {target}")
     sys.exit()
 
 class Box:
@@ -240,20 +277,25 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     if len(found) > 1:
         CRED: str= '\033[91m'
         CEND: str = '\033[0m'
-        msg: str = "Multiple `" + CRED \
-                + "edgemorph.toml" + CEND \
-                + "` files were detected:"
+        msg: str = "Warning: Multiple " + CRED + "edgemorph.toml" + CEND + " files were detected:"
+        print(msg+"\n")
+        print(" ID  Files")
+        print(" --  -----")
+        allowed: set[int] = set()
         for slice_idx in range(len(found)):
+            allowed.add(slice_idx + 1)
             # ToDo: Impove this line's readability
             print(f"  {slice_idx + 1}) {str(found[slice_idx][1].loc.resolve().absolute())}")
         while True:
-            path_idx = input("\nPlease indicate which file to use: ")
+            path_idx = input("\nPlease enter the appropriate ID number: ")
             try:
                 path_idx = int(path_idx)
+                if path_idx not in allowed:
+                    continue
             except ValueError:
                 continue
             try:
-                pref = found[path_idx]
+                pref = found[path_idx-1]
             except IndexError:
                 continue
             break
@@ -263,35 +305,37 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     
     return stored
 
-def build_toml(project_root: str) -> str:
+def build_toml(project_root: str, schema: str = "Edgemorph") -> str:
     return f'''[edgemorph]
-enable_rs_binding = "true"
-enable_py_binding = "true"
-project_root      = "{project_root}"
-mod_directories   = ["/edb_modules"]
+project_root    = "{project_root}"
+mod_directories = ["/edb_modules"]
 
-[edgemorph_output]
-schema_name = ""
+[edgemorph.codegen]
+schema_name = "{schema}"
 
-[edgemorph_output.rust]
-[edgemorph_output.rust.modules]
-[edgemorph_output.rust.modules.{project_root}]
-source = "mod_{project_root}.esdl"
-output = "{project_root}/src/lib/edm_{project_root}.rs"
+[edgemorph.codegen.rust]
+enabled = "true"
 
-[edgemorph_output.python]
-[edgemorph_output.python.modules]
-[edgemorph_output.python.modules.{project_root}]
-source = "mod_{project_root}.esdl"
-output = "/{project_root}/edm_{project_root}.py"
+[edgemorph.codegen.rust.modules]
+    [edgemorph.codegen.rust.modules.{project_root}]
+    source = "mod_{project_root}.esdl"
+    output = "{project_root}/src/lib/edm_{project_root}.rs"
+
+[edgemorph.codegen.python]
+enabled = "true"
+
+[edgemorph.codegen.python.modules]
+    [edgemorph.codegen.python.modules.{project_root}]
+    source = "mod_{project_root}.esdl"
+    output = "/{project_root}/edm_{project_root}.py"
 
 [edgedb]
 [edgedb.databases]
-[edgedb.databases.edgedb_primary]
+[edgedb.databases.primary]
 name = ""
 dsn = ""
 
-[edgedb.databases.edgedb_primary.modules]
+[edgedb.databases.primary.modules]
 {project_root} = "/edb_modules/mod_{project_root}.esdl"
 
 '''
@@ -313,6 +357,7 @@ def check_for_edgemorph(path: Path) -> IOResult:
     else:
         exit_status = IOResult(found=False)
     return exit_status
+
 def make_install(args):
     print("Running make install....")
 
@@ -457,7 +502,7 @@ if __name__ == "__main__":
 
     # `edm make`: '.' means ./*.esdl ; '*' means **/*.esdl
     edm_make.add_argument('-f', 
-            default="./*",
+            default="*",
             dest='make',
             nargs='*', 
             metavar="SOURCE")
@@ -465,7 +510,7 @@ if __name__ == "__main__":
     # `edm make install`
     edm_make_install.add_argument('-f', 
             dest='make_install', 
-            default='./*',
+            default='*',
             nargs='*', 
             metavar="SOURCE")
 
