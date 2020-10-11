@@ -89,7 +89,12 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     sys.stdout.write("\033[;1m")
     print("Initializing your new Edgemorph project!")
     schema: str = input("Enter your project's schema name (or default to `Edgemorph`): ")
+    
+    # Use with a map in the Rust verison
+    if not schema:
+        schema = "Edgemorph"
 
+    # Prepare edgemorph.toml's content
     file_content: str = build_toml(project_root, schema)
     with open(project_dir+"/edgemorph.toml", "w") as f:
         f.write(file_content)
@@ -270,8 +275,12 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     try:
         pref = heapq.heappop(found)
     except IndexError:
-        print("`edgemorph.toml` not found. Try running `edm init <project name>`")
+        msg: str = '\033[91m'+f"ERROR: `edgemorph.toml` not found! "+'\033[0m'
+        print(msg)
+        print("HELP: Try running \033[;1medm init <project_name>\033[0m\n") 
         sys.exit(1)
+    
+    # Being explicit about clones that 
     heapq.heappush(found, copy(pref))
     
     if len(found) > 1:
@@ -305,7 +314,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     
     return stored
 
-def build_toml(project_root: str, schema: str = "Edgemorph") -> str:
+def build_toml(project_root: str, schema: str) -> str:
     return f'''[edgemorph]
 project_root    = "{project_root}"
 mod_directories = ["/edb_modules"]
@@ -319,7 +328,7 @@ enabled = "true"
 [edgemorph.codegen.rust.modules]
     [edgemorph.codegen.rust.modules.{project_root}]
     source = "mod_{project_root}.esdl"
-    output = "{project_root}/src/lib/edm_{project_root}.rs"
+    output = "/src/lib/edm_{project_root}.rs"
 
 [edgemorph.codegen.python]
 enabled = "true"
