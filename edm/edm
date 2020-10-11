@@ -5,7 +5,7 @@ This is a Python prototype of the EDM compiler.
 To quickly iterate on the design of `edm`, this pseudo-compiler
 bootlegs the official EdgeDB lexer to validate SDL grammar.
 '''
-import IPython
+
 import subprocess
 import os
 import argparse 
