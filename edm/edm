@@ -5,7 +5,7 @@ This is a Python prototype of the EDM compiler.
 To quickly iterate on the design of `edm`, this pseudo-compiler
 bootlegs the official EdgeDB lexer to validate SDL grammar.
 '''
-
+import toml
 import subprocess
 import os
 import argparse 
@@ -104,7 +104,10 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
 def make(target: str):
     print("Running make....")
     files: Box = find_edgemorph_toml()
-    print(f"DEBUG: Using {files.unwrap().pop()[1].__str__()}")
+    path: Path = files.unwrap().pop()[1].loc
+    #print(f"DEBUG: Using {files.unwrap().pop()[1].__str__()}")
+    edm_toml = load_edgemorph_toml(path)
+    print(edm_toml)
     sys.exit()
 
 class Box:
@@ -264,28 +267,43 @@ def build_toml(project_root: str) -> str:
     return f'''[edgemorph]
 enable_rs_binding = "true"
 enable_py_binding = "true"
-project_root      = ["{project_root}"]
-mod_directories   = [
-    "{project_root}/edb_modules"
-]
-edgemorph_output  = {{
-    rust = [
-        ["mod_{project_root}.esdl", "{project_root}/src/lib/edm_{project_root}.rs"]
-    ],
-    python = [
-        ["mod_{project_root}.esdl", "{project_root}/{project_root}/edm_{project_root}.py"]
-    ]
-}}
+project_root      = "{project_root}"
+mod_directories   = ["/edb_modules"]
+
+[edgemorph_output]
+schema_name = ""
+
+[edgemorph_output.rust]
+[edgemorph_output.rust.modules]
+[edgemorph_output.rust.modules.{project_root}]
+source = "mod_{project_root}.esdl"
+output = "{project_root}/src/lib/edm_{project_root}.rs"
+
+[edgemorph_output.python]
+[edgemorph_output.python.modules]
+[edgemorph_output.python.modules.{project_root}]
+source = "mod_{project_root}.esdl"
+output = "/{project_root}/edm_{project_root}.py"
 
 [edgedb]
-databases         = {{ 
-    edgedb_primary = [{{
-        dsn     = "", 
-        modules = ["{project_root}/edb_modules/mod_{project_root}.esdl"]
-    }}]
-}}'''
+[edgedb.databases]
+[edgedb.databases.edgedb_primary]
+name = ""
+dsn = ""
 
+[edgedb.databases.edgedb_primary.modules]
+{project_root} = "/edb_modules/mod_{project_root}.esdl"
 
+'''
+
+def load_edgemorph_toml(path: Path) -> Optional[dict]:
+    edm_toml: dict
+    try:
+        with open(path.resolve().absolute(), "r") as f:
+            edm_toml = toml.load(f)
+    except FileNotFoundError:
+        return None
+    return edm_toml
 
 def check_for_edgemorph(path: Path) -> IOResult:
     exit_status: IOResult

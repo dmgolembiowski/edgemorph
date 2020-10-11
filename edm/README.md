@@ -22,26 +22,32 @@ module ${project_root} {
 [edgemorph]
 enable_rs_binding = "true"
 enable_py_binding = "true"
-project_root      = ["${project_root}"]
-mod_directories   = [
-    "${project_root}/edb_modules"
-]
-edgemorph_output  = {
-    rust = [
-        ["mod_${project_root}.esdl", "${project_root}/src/lib/edm_${project_root_last_child}.rs"]
-    ],
-    python = [
-        ["mod_${project_root}.esdl", "${project_root}/${project_root_last_child}/edm_${project_root_last_child}.py"]
-    ]
-}
+project_root      = "{project_root}"
+mod_directories   = ["/edb_modules"]
+
+[edgemorph_output]
+schema_name = ""
+
+[edgemorph_output.rust]
+[edgemorph_output.rust.modules]
+[edgemorph_output.rust.modules.{project_root}]
+source = "mod_{project_root}.esdl"
+output = "{project_root}/src/lib/edm_{project_root}.rs"
+
+[edgemorph_output.python]
+[edgemorph_output.python.modules]
+[edgemorph_output.python.modules.{project_root}]
+source = "mod_{project_root}.esdl"
+output = "/{project_root}/edm_{project_root}.py"
 
 [edgedb]
-databases         = { 
-    edgedb_primary = [{
-        dsn     = "", 
-        modules = ["${project_root}/edb_modules/mod_${project_root}.esdl"]
-    }]
-}
+[edgedb.databases]
+[edgedb.databases.edgedb_primary]
+name = ""
+dsn = ""
+
+[edgedb.databases.edgedb_primary.modules]
+{project_root} = "/edb_modules/mod_{project_root}.esdl"
 ```
 
 ***
