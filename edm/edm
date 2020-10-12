@@ -193,7 +193,7 @@ def make(target: str):
             else:
                 print(f"rel_path = {rel_path}")
         '''
-        If we've reached this 'else' block, it implies 1 of 3 scenarios:
+        If we've reached this 'else' block, it implies 1 of 4 scenarios:
           1) target[0] = ['something.esdl']
           2) target[0] = ['edb_modules/something.esdl', 'something_else.esdl', ...]
           3) target[0] = ['../../way_up.esdl', ...]
