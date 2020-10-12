@@ -17,6 +17,8 @@ from pathlib import (Path,)
 from functools import wraps
 import heapq
 from copy import copy
+import multiprocessing
+
 # These were added because `edb` is not 
 # a public-facing package. In the future
 # these shims can be removed since 
@@ -26,6 +28,7 @@ from copy import copy
 global INITIAL_WORKING_DIRECTORY
 global EDM_PATH
 global EDB_MODULE_DIRECTORY
+
 global qlparser
 
 __datastore__ = {}
@@ -104,7 +107,7 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     Path(f"{project_dir}/edm_{project_root}").mkdir()
 
     # Make the default SDL module file
-    with open(f"{project_dir}/edb_modules/mod_{project_root}.esdl", "w") as f:
+    with open(f"{project_dir}/edb_modules/{project_root}.esdl", "w") as f:
         stream = f"""module {project_root} {{
 
 }}"""
@@ -148,9 +151,173 @@ def make(target: str):
     These are future enhancements that will involve incremental compilation,
     rather than the single-pass implementation.
     '''
-    pprint(edm_toml)
-    print(f"target: {target}")
+    # pprint(edm_toml)
+    modules = [
+            edm_toml["edgemorph"]["project_root"] + "/" + rel_path
+            for (_modname, rel_path)
+            in edm_toml["edgedb"]["databases"]["primary"]["modules"].items()
+    ]
+    
+    # Allocate a list/mutable vector of matching `.esdl` files
+    retrieved: list[str] = []
+
+    # Encapsulate some behavior ahead of time for the
+    # following 20ish lines
+    def glob_paths(cwd: str, rel_path: str) -> Optional[str]:
+        result: Optional[str]
+        try:
+            result = cwd + '/' + '/'.join(
+                [
+                    inode
+                    for inode
+                    in rel_path.split('/')
+                    if inode not in cwd.split('/')
+                ]
+            )
+        except:
+            result = None
+        return result
+        
+    # For Rust, allocate a `String` of the current working directory
+    # and pass a borrow to `glob_paths`
+    cwd: str = os.getcwd()
+    matched: Optional[str]
+    untracked: [str] = []
+    broken_refs: [str] = []
+    if target[0] == "*" and len(target) == 1:
+        # In Rust, do if-let/match here instead
+        for rel_path in modules:
+            matched = glob_paths(cwd, rel_path)
+            if matched is not None:
+                retrieved.append(matched)
+            else:
+                print(f"rel_path = {rel_path}")
+        '''
+        If we've reached this 'else' block, it implies 1 of 3 scenarios:
+          1) target[0] = ['something.esdl']
+          2) target[0] = ['edb_modules/something.esdl', 'something_else.esdl', ...]
+          3) target[0] = ['../../way_up.esdl', ...]
+          4) target[0] = ['.', ...] 
+        Cases (1) and (2) are no problem. We can basically replicate the above logic
+        with another for loop. Case (3) poses some challenges because `glob_paths`
+        will not resolve relative paths and I'd rather not increase its complexity.
+
+        To resolve Case (3), there needs to be some additional checking to ensure
+        `glob_paths` will always return the absolute path.
+        ''' 
+    elif "." not in set(target):
+        # modpath: Union[Path, str]
+        for modpath in modules:
+            if not (modpath := Path(modpath)).exists():
+                # edgemorph.toml has it but the local filesystem doesn't
+                broken_refs.append(str(modpath))
+                continue
+            else:
+                # `modpath` does exist in `edgemorph.toml`, but 
+                # does it also match a destination on the filesystem?
+                
+                modpath = str(modpath.resolve())
+                match_set: tuple[str] = tuple()
+                extant_path: Union[Path, str]
+                for some_path in target:
+                    if (extant_path := Path(some_path)).exists():
+                        extant_path = extant_path.resolve()
+                        if extant_path == modpath and extant_path not in match_set:
+                            match_set += (extant_path,)
+                for mat in iter(set(match_set)):
+                    retrieved.append(mat)
+                if modpath not in set(retrieved):
+                    untracked.append(modpath)
+
+    elif target[0] == "." and len(target) == 1:
+        # Get all .esdl files in the current working directory
+        # and add them to `retrieved`.
+        
+        # modpath: Union[Path, str]
+        for modpath in modules:
+            if not (modpath := Path(rel_path)).exists():
+                # edgemorph.toml has it but the local filesystem doesn't
+                broken_refs.append(str(modpath))
+                continue
+            else:
+                # `modpath` does exist in `edgemorph.toml`, but 
+                # does it also match a destination on the filesystem?
+
+                modpath = str(modpath.resolve())
+                match_set: tuple[str] = tuple()
+                extant_path: Union[Path, str]
+                some_path = target[0] # == "."
+                if (extant_path := Path(some_path)).exists():
+                    extant_path = extant_path.resolve()
+                    if extant_path == modpath and extant_path not in match_set:
+                        match_set += (extant_path,)
+                # How can this be improved without the use of `try`:
+                # ... `except IndexError:`?
+                for mat in iter(set(match_set)):
+                    retrieved.append(mat)
+                if modpath not in set(retrieved):
+                    untracked.append(modpath)
+    else:
+        # Print an error message suggesting that the user
+        # needs to run `edm add` to register module files
+        # then sys.exit before reaching the end of this scope
+        print(f"HELP: You supplied `edm make [A|.] [*|B] ....`.")
+        print(f"HELP: Try reducing the complexity to simpler statements: `edm make <X>`")
+        sys.exit(1)
+
+    # If `broken_refs`, then raise a critical warning that 
+    # missing .esdl module file names were supplied, which are being tracked
+    # but they are not available on the filesystem
+    CRED: str ='\033[91m'
+    CEND: str = '\033[0m'
+    if broken_refs:
+        msg: str = CRED + "CRITICAL WARNING: One or more EdgeDB module files are missing from the local filesystem!";
+        print(msg + "\nThese include:")
+        for broken in broken_refs:
+            print(f" + {broken}")
+        print("If this does not seem correct, please double check `edgemorph.toml` and remove any unused entries before running this command again.")
+        sys.stdout.write(CEND)
+
+    # If `untracked`, mention running `edm add`
+    if untracked:
+        msg: str = CRED + "ERROR: Cannot run `make` command on untracked EdgeDB module files. "
+        msg += "Please try again after running:" + CEND
+        print(msg + "\n")
+        for filename in untracked:
+            print(f" -> edm add {filename}")
+    
+    # Finally, the moment of truth, calling `compile` on these paths
+    if retrieved:
+        print("Compiling your EdgeDB modules....")
+        sleep(1)
+        batch_compilation(retrieved)
     sys.exit()
+
+def batch_compilation(module_paths: [str]):
+
+    poolsize: int = len(module_paths)
+    async_pool = multiprocessing.Pool(processes=poolsize)
+    timed_out: bool = False
+    results = []
+    import IPython
+    with async_pool as pool:
+        async_jobs = [
+                pool.apply_async(compile, module_paths)
+                for i in range(poolsize)
+        ]
+        try:
+            async_res  = [
+                    job.get(timeout=12)
+                    for job in async_jobs
+            ]
+            results = copy(async_res)
+        except TimeoutError:
+            print("ERROR: Compilation workers timed out. Exiting.")
+            timed_out = True
+    if timed_out:
+        sys.exit(1)
+    print("varslist: async_pool, timed_out, results, async_jobs, async_res")
+    IPython.embed()
 
 class Box:
     def __init__(self, ty: Any):
@@ -327,7 +494,7 @@ enabled = "true"
 
 [edgemorph.codegen.rust.modules]
     [edgemorph.codegen.rust.modules.{project_root}]
-    source = "mod_{project_root}.esdl"
+    source = "/edb_modules/{project_root}.esdl"
     output = "/src/lib/edm_{project_root}.rs"
 
 [edgemorph.codegen.python]
@@ -335,7 +502,7 @@ enabled = "true"
 
 [edgemorph.codegen.python.modules]
     [edgemorph.codegen.python.modules.{project_root}]
-    source = "mod_{project_root}.esdl"
+    source = "/edb_modules/{project_root}.esdl"
     output = "/{project_root}/edm_{project_root}.py"
 
 [edgedb]
@@ -345,7 +512,7 @@ name = ""
 dsn = ""
 
 [edgedb.databases.primary.modules]
-{project_root} = "/edb_modules/mod_{project_root}.esdl"
+{project_root} = "/edb_modules/{project_root}.esdl"
 
 '''
 
@@ -374,7 +541,21 @@ def add(args):
     print("Running add.....")
 
 def compile(args):
-    print("Compiling....")
+    print(f"Compiling {args}....")
+    if not isinstance(args, str):
+        print("ERROR: Method of compilation not yet implemented. Exiting.")
+        return None
+    else:
+        # Assuming args to be the file path
+        with open(args, "r") as f:
+            source = f.read()
+        
+        syntax_lex = qlparser.parse_sdl(source)
+
+        # Do some other things here
+        # ...
+        print(syntax_lex.dump())
+        return syntax_lex
 
 def test(args):
     print("Testing connectivity...")
@@ -436,6 +617,7 @@ def import_edb():
     try:
         # To import the bootstrapped `edb.edgeql.parser` we trick the Python
         # importlib loader into checking foreign sources.
+        global qlparser
         os.chdir(EDB_MODULE_DIRECTORY)
         from edb.edgeql import (parser,)
     
