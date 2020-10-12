@@ -24,36 +24,36 @@ but now — your projects can leverage [`edm`](https://github.com/dmgolembiowski
 
 ```toml
 [edgemorph]
-enable_rs_binding = "true"
-enable_py_binding = "true"
-project_root      = ["<this file's parent directory>"]
-mod_directories   = [
-    "<relative path to dirA>",
-    "<relative path to dirB>",
-    "<relative path to dirC>",
-    "..."
-]
-edgemorph_output  = {
-    rust = [
-        ["module_file_A", "</path/to/output_A>.rs"]
-    ],
-    python = [
-        ["module_file_B", "</path/to/output_B>.py"],
-        ["module_file_C", "</path/to/output_C>.py"]
-    ]
-}
+project_root    = "edgedb_app"
+mod_directories = ["/edb_modules"]
+
+[edgemorph.codegen]
+schema_name = "Edgemorph"
+
+[edgemorph.codegen.rust]
+enabled = "true"
+
+[edgemorph.codegen.rust.modules]
+    [edgemorph.codegen.rust.modules.edgedb_app]
+    source = "/edb_modules/edgedb_app.esdl"
+    output = "/src/lib/edm_edgedb_app.rs"
+
+[edgemorph.codegen.python]
+enabled = "true"
+
+[edgemorph.codegen.python.modules]
+    [edgemorph.codegen.python.modules.edgedb_app]
+    source = "/edb_modules/edgedb_app.esdl"
+    output = "/edgedb_app/edm_edgedb_app.py"
 
 [edgedb]
-databases         = { 
-    database_name_1 = [{
-        dsn     = "<dsn_1>", 
-        modules = ["<module_name_a>"]
-    }],
-    database_name_2 = [{
-        dsn     = "<dsn_2>", 
-        modules = ["<module_name_b>", "<module_name_c>"]
-    }]
-}
+[edgedb.databases]
+[edgedb.databases.primary]
+name = ""
+dsn = ""
+
+[edgedb.databases.primary.modules]
+edgedb_app = "edb_modules/edgedb_app.esdl"
 ```
 
 Unlike traditional object-relational mappers, Edgemorph requires users to write database-level code. Using EdgeDB's rich query language, Edgemorph combines the strictly typed qualities of EdgeDB with a library-factory written in Rust. This unconventional strategy allows users to compile entirely custom bytecode libraries on a per-project basis, but continue to program in the stylings of a typical ORM.
