@@ -5,6 +5,7 @@ This is a Python prototype of the EDM compiler.
 To quickly iterate on the design of `edm`, this pseudo-compiler
 bootlegs the official EdgeDB lexer to validate SDL grammar.
 '''
+import re
 from pprint import pprint
 from time import sleep
 import toml
@@ -18,7 +19,7 @@ from functools import wraps
 import heapq
 from copy import copy
 import multiprocessing
-
+import io
 # These were added because `edb` is not 
 # a public-facing package. In the future
 # these shims can be removed since 
@@ -28,8 +29,10 @@ import multiprocessing
 global INITIAL_WORKING_DIRECTORY
 global EDM_PATH
 global EDB_MODULE_DIRECTORY
-
+global markup
 global qlparser
+# global Schema
+global serialize
 
 __datastore__ = {}
 
@@ -317,8 +320,36 @@ def batch_compilation(module_paths: [str]):
     if timed_out:
         sys.exit(1)
     print("varslist: async_pool, timed_out, results, async_jobs, async_res")
+    serialized = [
+            re.subn(r" at\s0x............", "",  str(serialize(tt)))[0].replace(' ', '')
+            for tt
+            in results ]
+    #re.subn(r" at\s0x............", "", st)
     IPython.embed()
-
+'''
+class AST(io.StringIO):
+    def __init__(self, **kwargs):
+        self._raw: str
+        self._sanitized: bool = False
+        #self._schema: Optional[Schema] = None
+        self._schema = None
+        super().__init__(**kwargs)
+    def write(self, ast_content: str) -> None:
+        self._raw = ast_content
+    def read(self) -> str:
+        return self._raw
+    @schema.setter
+    def schema(self, new_schema):
+        #def schema(self, new_schema: Schema):
+        self._schema = new_schema
+    @property
+    def schema(self): # -> Schema:
+        return self._schema
+    def serialize(self):
+        raise NotImplemented
+    def deserialize(self):
+        raise NotImplemented
+'''
 class Box:
     def __init__(self, ty: Any):
         self.ty = ty
@@ -618,14 +649,21 @@ def import_edb():
         # To import the bootstrapped `edb.edgeql.parser` we trick the Python
         # importlib loader into checking foreign sources.
         global qlparser
+        global markup
+        # global Schema
+        global serialize
         os.chdir(EDB_MODULE_DIRECTORY)
         from edb.edgeql import (parser,)
-    
+        from edb.edgeql.ast import Schema as schema
+        # from edb.common import markup as Markup
+        from edb.common.markup import _serialize as Serialize
         # In the future, it could be possible to simply run
         # `from edb.graphql import parser as qlparser`; but for
         # the time being, that is not available
         qlparser = parser
-        
+        # markup = Markup
+        # Schema = schema
+        serialize = Serialize
         # Return home
         os.chdir(INITIAL_WORKING_DIRECTORY)
     except Exception as e:
