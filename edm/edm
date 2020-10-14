@@ -11,7 +11,7 @@ from time import sleep
 import toml
 import subprocess
 import os
-import argparse 
+import argparse
 import sys
 from typing import *
 from pathlib import (Path,)
@@ -20,10 +20,10 @@ import heapq
 from copy import copy
 import multiprocessing
 import io
-# These were added because `edb` is not 
+# These were added because `edb` is not
 # a public-facing package. In the future
-# these shims can be removed since 
-# "... [edgedb author(s)] might want to 
+# these shims can be removed since
+# "... [edgedb author(s)] might want to
 #      make "edb" a namespace
 #      package at some point."
 global INITIAL_WORKING_DIRECTORY
@@ -54,11 +54,11 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     """init
 
     This function initializes an edgemorph project.
-    For the full explanation, see 
+    For the full explanation, see
     https://github.com/dmgolembiowski/edgemorph/tree/master/edm#formal-specification
-    
+
     PARAMETERS
-    - loc: Optional[str] = '.' 
+    - loc: Optional[str] = '.'
         This parameter is the location on the filesystem where edgemorph
         projects can be initialized. The default value is the current
         working directory.
@@ -95,7 +95,7 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     sys.stdout.write("\033[;1m")
     print("Initializing your new Edgemorph project!")
     schema: str = input("Enter your project's schema name (or default to `Edgemorph`): ")
-    
+
     # Use with a map in the Rust verison
     if not schema:
         schema = "Edgemorph"
@@ -135,10 +135,10 @@ def make(target: str):
     if it's (*), then `make` all of the modules.
 
     These are determined by recursively exploring `edgedb.databases.[X].modules`.
-    
+
     Otherwise, perform a single `make` on `target` = `Y` where `Y` is valid for
     `edgedb.databases.[X].modules.[Y].
-    
+
     When `target` == '*', get all `*.esdl` files in `edgemorph.toml` and
     1) check for their existence on the filesystem
     [1) compare the diffs of of files for each extant on the filesystem]
@@ -155,12 +155,13 @@ def make(target: str):
     rather than the single-pass implementation.
     '''
     # pprint(edm_toml)
-    modules = [
-            edm_toml["edgemorph"]["project_root"] + "/" + rel_path
-            for (_modname, rel_path)
-            in edm_toml["edgedb"]["databases"]["primary"]["modules"].items()
-    ]
-    
+    start_path = Path(path).resolve().parent
+
+    modules = []
+    for mod_path in edm_toml["edgedb"]["databases"]["primary"]["modules"].values():
+        mod_path = Path(mod_path)
+        modules.append(start_path / mod_path.relative_to(mod_path.anchor))
+
     # Allocate a list/mutable vector of matching `.esdl` files
     retrieved: list[str] = []
 
@@ -180,7 +181,7 @@ def make(target: str):
         except:
             result = None
         return result
-        
+
     # For Rust, allocate a `String` of the current working directory
     # and pass a borrow to `glob_paths`
     cwd: str = os.getcwd()
@@ -200,26 +201,25 @@ def make(target: str):
           1) target[0] = ['something.esdl']
           2) target[0] = ['edb_modules/something.esdl', 'something_else.esdl', ...]
           3) target[0] = ['../../way_up.esdl', ...]
-          4) target[0] = ['.', ...] 
+          4) target[0] = ['.', ...]
         Cases (1) and (2) are no problem. We can basically replicate the above logic
         with another for loop. Case (3) poses some challenges because `glob_paths`
         will not resolve relative paths and I'd rather not increase its complexity.
 
         To resolve Case (3), there needs to be some additional checking to ensure
         `glob_paths` will always return the absolute path.
-        ''' 
+        '''
     elif "." not in set(target):
         # modpath: Union[Path, str]
         for modpath in modules:
-            if not (modpath := Path(modpath)).exists():
+            if not modpath.exists():
                 # edgemorph.toml has it but the local filesystem doesn't
                 broken_refs.append(str(modpath))
                 continue
             else:
-                # `modpath` does exist in `edgemorph.toml`, but 
+                # `modpath` does exist in `edgemorph.toml`, but
                 # does it also match a destination on the filesystem?
-                
-                modpath = str(modpath.resolve())
+
                 match_set: tuple[str] = tuple()
                 extant_path: Union[Path, str]
                 for some_path in target:
@@ -235,7 +235,7 @@ def make(target: str):
     elif target[0] == "." and len(target) == 1:
         # Get all .esdl files in the current working directory
         # and add them to `retrieved`.
-        
+
         # modpath: Union[Path, str]
         for modpath in modules:
             if not (modpath := Path(rel_path)).exists():
@@ -243,7 +243,7 @@ def make(target: str):
                 broken_refs.append(str(modpath))
                 continue
             else:
-                # `modpath` does exist in `edgemorph.toml`, but 
+                # `modpath` does exist in `edgemorph.toml`, but
                 # does it also match a destination on the filesystem?
 
                 modpath = str(modpath.resolve())
@@ -268,7 +268,7 @@ def make(target: str):
         print(f"HELP: Try reducing the complexity to simpler statements: `edm make <X>`")
         sys.exit(1)
 
-    # If `broken_refs`, then raise a critical warning that 
+    # If `broken_refs`, then raise a critical warning that
     # missing .esdl module file names were supplied, which are being tracked
     # but they are not available on the filesystem
     CRED: str ='\033[91m'
@@ -288,7 +288,7 @@ def make(target: str):
         print(msg + "\n")
         for filename in untracked:
             print(f" -> edm add {filename}")
-    
+
     # Finally, the moment of truth, calling `compile` on these paths
     if retrieved:
         print("Compiling your EdgeDB modules....")
@@ -380,7 +380,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
 
     This function scans the surrounding neighborhood
     for a potential configuration file. It imagines that
-    the user will try to invoke an edm command 
+    the user will try to invoke an edm command
     in one of the possible locations:
     - The top level project directory `project_root`;
         .
@@ -398,7 +398,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
         ├── edm_app
         └── src
             └── main.rs
-    
+
     - Under `edb_modules` or any of its branches:
         .
         ├── backend
@@ -409,7 +409,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
         │   ├── mod_api_v1.esdl
         │   └── mod_api_v2.esdl
         └── mod_app.esdl
-    
+
     - Or under one of the two directories where native codegen
       files are written:
         ├── edm_app
@@ -442,7 +442,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
             return self.mark
 
     prefix: Prefix = Prefix()
-    
+
     def traverse(toml: Path) -> Union[Callable, None]:
         nonlocal depth_limit
         nonlocal dirs_walked
@@ -460,11 +460,11 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
             return traverse(toml)
         else:
             return None
-    
+
     # Prepare a priority queue of the possible `edgemorph.toml` locations.
     # `Entry`s are ranked by an inverse proximity score.
     traverse(Path("./edgemorph.toml"))
-    
+
     # For some additional checks
     pref: (int, Entry)
     slice_idx: int
@@ -475,12 +475,12 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     except IndexError:
         msg: str = '\033[91m'+f"ERROR: `edgemorph.toml` not found! "+'\033[0m'
         print(msg)
-        print("HELP: Try running \033[;1medm init <project_name>\033[0m\n") 
+        print("HELP: Try running \033[;1medm init <project_name>\033[0m\n")
         sys.exit(1)
-    
-    # Being explicit about clones that 
+
+    # Being explicit about clones that
     heapq.heappush(found, copy(pref))
-    
+
     if len(found) > 1:
         CRED: str= '\033[91m'
         CEND: str = '\033[0m'
@@ -509,7 +509,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
 
     # Store this in a cache for later retrieval
     stored = memcache("edgemorph.toml", Box([pref]))
-    
+
     return stored
 
 def build_toml(project_root: str, schema: str) -> str:
@@ -573,14 +573,14 @@ def add(args):
 
 def compile(args):
     print(f"Compiling {args}....")
-    if not isinstance(args, str):
+    if not isinstance(args, (str, Path)):
         print("ERROR: Method of compilation not yet implemented. Exiting.")
         return None
     else:
         # Assuming args to be the file path
         with open(args, "r") as f:
             source = f.read()
-        
+
         syntax_lex = qlparser.parse_sdl(source)
 
         # Do some other things here
@@ -594,7 +594,7 @@ def test(args):
 def main(args: argparse.Namespace):
     # ToDo: Replace this with `match - case` from PEP 622
     func_name = next(iter(vars(args)))
-    
+
     # Extract the necessary destinations and arguments
     if func_name == "make":
         if vars(args).get("make") == ["install"] \
@@ -607,7 +607,7 @@ def main(args: argparse.Namespace):
     # function targets. For example:
     permitted = {
         "init",
-        "add", 
+        "add",
         "make",
         "compile",
         "test",
@@ -675,7 +675,7 @@ def usage():
 positional arguments:
     help                shows this message
     init                initializes a new edgemorph project
-    add                 creates a new module file and/or updates `edgemorph.toml` 
+    add                 creates a new module file and/or updates `edgemorph.toml`
     make                high-level utility for AST checking and generating artifacts
     make install        migrate the schema to an EdgeDB instance
     compile             low-level utility for AST checking
@@ -683,7 +683,7 @@ positional arguments:
 
 argument values:
     init                [ directory_name | . ]
-    add                 [ new_module ] 
+    add                 [ new_module ]
     make                [ edb_module | * ]
     make install        [ (edb_module)+ | * ]
     compile             [ edb_module_path ]
@@ -692,14 +692,14 @@ argument values:
 '''
 
 if __name__ == "__main__":
-    
+
     # These are unhealthy shims that can be removed in the future
     INITIAL_WORKING_DIRECTORY = os.getcwd()
     EDM_PATH = os.path.dirname(os.path.realpath(__file__))
     EDB_MODULE_DIRECTORY = f"{EDM_PATH}/bootstrap/edgedb"
     import_edb()
 
-    # This shim may be a source of errors in the future. 
+    # This shim may be a source of errors in the future.
     # Currently, it is responsible for allowing the argument
     # parser to allow argument names to not use dashed names
     lastarg = sys.argv[-1]
@@ -712,7 +712,7 @@ if __name__ == "__main__":
             prog="edm",
             usage=usage()
             )
-    
+
     # Auxillary parsers beneath `edm_parser`
     subparser   = edm_parser.add_subparsers()
     edm_init    = subparser.add_parser("init")
@@ -730,17 +730,17 @@ if __name__ == "__main__":
     edm_add.add_argument('-f', dest='add', metavar="MODULE_FILE")
 
     # `edm make`: '.' means ./*.esdl ; '*' means **/*.esdl
-    edm_make.add_argument('-f', 
+    edm_make.add_argument('-f',
             default="*",
             dest='make',
-            nargs='*', 
+            nargs='*',
             metavar="SOURCE")
 
     # `edm make install`
-    edm_make_install.add_argument('-f', 
-            dest='make_install', 
+    edm_make_install.add_argument('-f',
+            dest='make_install',
             default='*',
-            nargs='*', 
+            nargs='*',
             metavar="SOURCE")
 
     # `edm compile`
