@@ -1,0 +1,33 @@
+name: EDM (Python) Styles
+
+on:
+  push:
+    branches:
+     - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  style:
+    runs-on: ubuntu-18.04
+    defaults:
+      run:
+        working-directory: edm
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install poetry
+      run: pip install poetry==1.1
+    - name: Install dependencies
+      run: poetry install
+    - name: Run style checks
+      run: |
+        poetry run black --check --diff edm
+        poetry run isort --check-only edm
+        poetry run flake8 edm

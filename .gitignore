@@ -10,8 +10,10 @@ Cargo.lock
 **/*.rs.bk
 
 # Bootstrap edgedb
-/edm/bootstrap/
+/edm/bootstrap/edgedb
 
 # Python
 **/__pycache__/
 
+# VSCode
+.vscode/

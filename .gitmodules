@@ -1,0 +1,3 @@
+[submodule "edm/bootstrap/edgedb"]
+	path = edm/bootstrap/edgedb
+	url = git@github.com:edgedb/edgedb
