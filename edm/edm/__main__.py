@@ -1,56 +1,53 @@
 #!/usr/bin/env python3
 
-'''
+"""
 This is a Python prototype of the EDM compiler.
 To quickly iterate on the design of `edm`, this pseudo-compiler
 bootlegs the official EdgeDB lexer to validate SDL grammar.
-'''
-import re
-from pprint import pprint
-from time import sleep
-import toml
-import subprocess
-import os
+"""
 import argparse
-import sys
-from typing import *
-from pathlib import (Path,)
-from functools import wraps
 import heapq
-from copy import copy
 import multiprocessing
-import io
-# These were added because `edb` is not
-# a public-facing package. In the future
-# these shims can be removed since
-# "... [edgedb author(s)] might want to
-#      make "edb" a namespace
-#      package at some point."
-global INITIAL_WORKING_DIRECTORY
-global EDM_PATH
-global EDB_MODULE_DIRECTORY
-global markup
-global qlparser
-# global Schema
-global serialize
+import os
+import re
+import sys
+from copy import copy
+from pathlib import Path
+from time import sleep
+from typing import Any, Callable, List, Optional, Union
+
+import toml
+from edb.common.markup import _serialize as serialize
+from edb.edgeql import parser as qlparser
 
 __datastore__ = {}
+
 
 class Ok:
     """Ok
 
     This class emulates the Ok slice in Rust's `Result` enum.
     """
+
     def __init__(self, *args, **kwargs):
         self.args = args
         self.__dict__.update(kwargs)
 
+
+Result = Union[Ok, Exception]
+
+
 class IOResult:
-    def __init__(self, found: bool, *annotation: Optional[str]) -> None:
+    def __init__(self, found: bool, annotation: Optional[str] = None) -> None:
         self.annotation: Optional[str] = annotation
         self.found: bool = found
 
-def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
+
+def red(s: str) -> str:
+    return f"\033[91m{s}\033[0m"
+
+
+def init(loc: str = ".") -> Result:
     """init
 
     This function initializes an edgemorph project.
@@ -70,7 +67,7 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     project_root: str
     path: Path
     exit_status: Union[Path, Exception]
-    loc = loc.rstrip('/')
+    loc = loc.rstrip("/")
 
     # Create the project directory
     if (path := Path(loc)).exists():
@@ -81,20 +78,21 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
     # Need to check this directory for an `edgemorph.toml`
     edm_conf = check_for_edgemorph(path)
     if edm_conf.found:
-        exit_status = '\033[91m'+f"Error: Project already exists in {path.resolve()}"+'\033[0m'
         # Prefer to not dump a bunch of traceback
-        print(exit_status)
+        print(red(f"Error: Project already exists in {path.resolve()}"))
         sys.exit(1)
 
     # Create edgemorph-framework files and directories
-    project_dir  = path.absolute()
+    project_dir = path.absolute()
     project_root = project_dir.stem
-    project_dir  = str(project_dir)
+    project_dir = str(project_dir)
 
     # Starting with `edgemorph.toml`
     sys.stdout.write("\033[;1m")
     print("Initializing your new Edgemorph project!")
-    schema: str = input("Enter your project's schema name (or default to `Edgemorph`): ")
+    schema: str = input(
+        "Enter your project's schema name (or default to `Edgemorph`): "
+    )
 
     # Use with a map in the Rust verison
     if not schema:
@@ -102,7 +100,7 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
 
     # Prepare edgemorph.toml's content
     file_content: str = build_toml(project_root, schema)
-    with open(project_dir+"/edgemorph.toml", "w") as f:
+    with open(project_dir + "/edgemorph.toml", "w") as f:
         f.write(file_content)
 
     # Make the default modules/output folder(s)
@@ -118,6 +116,11 @@ def init(loc: Optional[str] = '.') -> Union[Ok, Exception]:
         sys.stdout.write("\033[;1m")
         print(f"Success! Your project was created at {project_dir}")
 
+
+def glob_paths(cwd: Path, rel_path: Path) -> Path:
+    return cwd.joinpath(*[inode for inode in rel_path.parts if inode not in cwd.parts])
+
+
 def make(target: str):
     files: Box = find_edgemorph_toml()
     path: Path = files.unwrap().pop()[1].loc
@@ -126,11 +129,10 @@ def make(target: str):
     try:
         assert edm_toml is not None
     except AssertionError:
-        msg: str ='\033[91m'+f"ERROR: `edgemorph.toml` not found."+'\033[0m'
-        print(msg)
+        print(red("ERROR: `edgemorph.toml` not found."))
         sys.exit(1)
 
-    '''
+    """
     First order of business is to case out the argument supplied to `make`;
     if it's (*), then `make` all of the modules.
 
@@ -153,11 +155,11 @@ def make(target: str):
     Note: ToDo items are enclosed in square brackets "[" and "]".
     These are future enhancements that will involve incremental compilation,
     rather than the single-pass implementation.
-    '''
+    """
     # pprint(edm_toml)
     start_path = Path(path).resolve().parent
 
-    modules = []
+    modules: List[Path] = []
     for mod_path in edm_toml["edgedb"]["databases"]["primary"]["modules"].values():
         mod_path = Path(mod_path)
         modules.append(start_path / mod_path.relative_to(mod_path.anchor))
@@ -165,26 +167,9 @@ def make(target: str):
     # Allocate a list/mutable vector of matching `.esdl` files
     retrieved: list[str] = []
 
-    # Encapsulate some behavior ahead of time for the
-    # following 20ish lines
-    def glob_paths(cwd: str, rel_path: str) -> Optional[str]:
-        result: Optional[str]
-        try:
-            result = cwd + '/' + '/'.join(
-                [
-                    inode
-                    for inode
-                    in rel_path.split('/')
-                    if inode not in cwd.split('/')
-                ]
-            )
-        except:
-            result = None
-        return result
-
     # For Rust, allocate a `String` of the current working directory
     # and pass a borrow to `glob_paths`
-    cwd: str = os.getcwd()
+    cwd = Path(os.getcwd())
     matched: Optional[str]
     untracked: [str] = []
     broken_refs: [str] = []
@@ -196,7 +181,7 @@ def make(target: str):
                 retrieved.append(matched)
             else:
                 print(f"rel_path = {rel_path}")
-        '''
+        """
         If we've reached this 'else' block, it implies 1 of 4 scenarios:
           1) target[0] = ['something.esdl']
           2) target[0] = ['edb_modules/something.esdl', 'something_else.esdl', ...]
@@ -208,7 +193,7 @@ def make(target: str):
 
         To resolve Case (3), there needs to be some additional checking to ensure
         `glob_paths` will always return the absolute path.
-        '''
+        """
     elif "." not in set(target):
         # modpath: Union[Path, str]
         for modpath in modules:
@@ -249,7 +234,7 @@ def make(target: str):
                 modpath = str(modpath.resolve())
                 match_set: tuple[str] = tuple()
                 extant_path: Union[Path, str]
-                some_path = target[0] # == "."
+                some_path = target[0]  # == "."
                 if (extant_path := Path(some_path)).exists():
                     extant_path = extant_path.resolve()
                     if extant_path == modpath and extant_path not in match_set:
@@ -264,28 +249,35 @@ def make(target: str):
         # Print an error message suggesting that the user
         # needs to run `edm add` to register module files
         # then sys.exit before reaching the end of this scope
-        print(f"HELP: You supplied `edm make [A|.] [*|B] ....`.")
-        print(f"HELP: Try reducing the complexity to simpler statements: `edm make <X>`")
+        print("HELP: You supplied `edm make [A|.] [*|B] ....`.")
+        print("HELP: Try reducing the complexity to simpler statements: `edm make <X>`")
         sys.exit(1)
 
     # If `broken_refs`, then raise a critical warning that
     # missing .esdl module file names were supplied, which are being tracked
     # but they are not available on the filesystem
-    CRED: str ='\033[91m'
-    CEND: str = '\033[0m'
     if broken_refs:
-        msg: str = CRED + "CRITICAL WARNING: One or more EdgeDB module files are missing from the local filesystem!";
-        print(msg + "\nThese include:")
+        msg = (
+            "CRITICAL WARNING: "
+            "One or more EdgeDB module files are missing from the local filesystem!\n"
+            "These include:\n"
+        )
         for broken in broken_refs:
-            print(f" + {broken}")
-        print("If this does not seem correct, please double check `edgemorph.toml` and remove any unused entries before running this command again.")
-        sys.stdout.write(CEND)
+            msg += f" + {broken}\n"
+
+        msg += (
+            "If this does not seem correct, please double check `edgemorph.toml` "
+            "and remove any unused entries before running this command again."
+        )
+        print(red(msg))
 
     # If `untracked`, mention running `edm add`
     if untracked:
-        msg: str = CRED + "ERROR: Cannot run `make` command on untracked EdgeDB module files. "
-        msg += "Please try again after running:" + CEND
-        print(msg + "\n")
+        msg = (
+            "ERROR: Cannot run `make` command on untracked EdgeDB module files. "
+            "Please try again after running:"
+        )
+        print(red(msg) + "\n")
         for filename in untracked:
             print(f" -> edm add {filename}")
 
@@ -296,23 +288,19 @@ def make(target: str):
         batch_compilation(retrieved)
     sys.exit()
 
-def batch_compilation(module_paths: [str]):
+
+def batch_compilation(module_paths: List[str]):
 
     poolsize: int = len(module_paths)
     async_pool = multiprocessing.Pool(processes=poolsize)
     timed_out: bool = False
     results = []
     import IPython
+
     with async_pool as pool:
-        async_jobs = [
-                pool.apply_async(compile, module_paths)
-                for i in range(poolsize)
-        ]
+        async_jobs = [pool.apply_async(compile, module_paths) for i in range(poolsize)]
         try:
-            async_res  = [
-                    job.get(timeout=12)
-                    for job in async_jobs
-            ]
+            async_res = [job.get(timeout=12) for job in async_jobs]
             results = copy(async_res)
         except TimeoutError:
             print("ERROR: Compilation workers timed out. Exiting.")
@@ -320,13 +308,15 @@ def batch_compilation(module_paths: [str]):
     if timed_out:
         sys.exit(1)
     print("varslist: async_pool, timed_out, results, async_jobs, async_res")
-    serialized = [
-            re.subn(r" at\s0x............", "",  str(serialize(tt)))[0].replace(' ', '')
-            for tt
-            in results ]
-    #re.subn(r" at\s0x............", "", st)
+    _ = [
+        re.subn(r" at\s0x............", "", str(serialize(tt)))[0].replace(" ", "")
+        for tt in results
+    ]
+    # re.subn(r" at\s0x............", "", st)
     IPython.embed()
-'''
+
+
+"""
 class AST(io.StringIO):
     def __init__(self, **kwargs):
         self._raw: str
@@ -349,15 +339,22 @@ class AST(io.StringIO):
         raise NotImplemented
     def deserialize(self):
         raise NotImplemented
-'''
+"""
+
+
 class Box:
     def __init__(self, ty: Any):
         self.ty = ty
+
     def unwrap(self):
         if self.ty is not None:
             return self.ty
         else:
-            raise TypeError("This is a bug. Please report this at https://github.com/dmgolembiowski/edgemorph/issues")
+            raise TypeError(
+                "This is a bug. Please report this at "
+                "https://github.com/dmgolembiowski/edgemorph/issues"
+            )
+
 
 def memcache(key: str, value: Optional[Box]) -> Optional[Box]:
     """Uses the `__datastore__` for allocating
@@ -372,8 +369,10 @@ def memcache(key: str, value: Optional[Box]) -> Optional[Box]:
 class Entry:
     def __init__(self, loc: Path) -> None:
         self.loc: Path = loc
+
     def __str__(self) -> str:
         return f"{str(self.loc.resolve().absolute())}"
+
 
 def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     """find_edgemorph_toml
@@ -436,8 +435,10 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     class Prefix:
         def __init__(self, initial_mark: str = "") -> None:
             self.mark: str = initial_mark
+
         def prepend(self) -> None:
             self.mark = "../" + self.mark
+
         def __str__(self) -> str:
             return self.mark
 
@@ -473,26 +474,24 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
     try:
         pref = heapq.heappop(found)
     except IndexError:
-        msg: str = '\033[91m'+f"ERROR: `edgemorph.toml` not found! "+'\033[0m'
-        print(msg)
-        print("HELP: Try running \033[;1medm init <project_name>\033[0m\n")
+        print(red("ERROR: `edgemorph.toml` not found!"))
+        print(f"HELP: Try running {red('edm init <project_name>')}\n")
         sys.exit(1)
 
     # Being explicit about clones that
     heapq.heappush(found, copy(pref))
 
     if len(found) > 1:
-        CRED: str= '\033[91m'
-        CEND: str = '\033[0m'
-        msg: str = "Warning: Multiple " + CRED + "edgemorph.toml" + CEND + " files were detected:"
-        print(msg+"\n")
+        msg: str = f"Warning: Multiple {red('edgemorph.toml')} files were detected:"
+        print(msg + "\n")
         print(" ID  Files")
         print(" --  -----")
         allowed: set[int] = set()
         for slice_idx in range(len(found)):
             allowed.add(slice_idx + 1)
             # ToDo: Impove this line's readability
-            print(f"  {slice_idx + 1}) {str(found[slice_idx][1].loc.resolve().absolute())}")
+            allowed_path = found[slice_idx][1].loc.resolve().absolute()
+            print(f"  {slice_idx + 1}) {allowed_path}")
         while True:
             path_idx = input("\nPlease enter the appropriate ID number: ")
             try:
@@ -502,7 +501,7 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
             except ValueError:
                 continue
             try:
-                pref = found[path_idx-1]
+                pref = found[path_idx - 1]
             except IndexError:
                 continue
             break
@@ -512,8 +511,9 @@ def find_edgemorph_toml(depth_limit: int = 3) -> Box:
 
     return stored
 
+
 def build_toml(project_root: str, schema: str) -> str:
-    return f'''[edgemorph]
+    return f"""[edgemorph]
 project_root    = "{project_root}"
 mod_directories = ["/edb_modules"]
 
@@ -545,7 +545,8 @@ dsn = ""
 [edgedb.databases.primary.modules]
 {project_root} = "/edb_modules/{project_root}.esdl"
 
-'''
+"""
+
 
 def load_edgemorph_toml(path: Path) -> Optional[dict]:
     edm_toml: dict
@@ -556,20 +557,24 @@ def load_edgemorph_toml(path: Path) -> Optional[dict]:
         return None
     return edm_toml
 
+
 def check_for_edgemorph(path: Path) -> IOResult:
     exit_status: IOResult
-    if Path(str(path)+"/edgemorph.toml").exists():
+    if Path(str(path) + "/edgemorph.toml").exists():
         exit_status = IOResult(found=True)
         return exit_status
     else:
         exit_status = IOResult(found=False)
     return exit_status
 
+
 def make_install(args):
     print("Running make install....")
 
+
 def add(args):
     print("Running add.....")
+
 
 def compile(args):
     print(f"Compiling {args}....")
@@ -588,32 +593,29 @@ def compile(args):
         print(syntax_lex.dump())
         return syntax_lex
 
+
 def test(args):
     print("Testing connectivity...")
 
+
 def main(args: argparse.Namespace):
     # ToDo: Replace this with `match - case` from PEP 622
-    func_name = next(iter(vars(args)))
+    try:
+        func_name = next(iter(vars(args)))
+    except StopIteration:
+        return
 
     # Extract the necessary destinations and arguments
     if func_name == "make":
-        if vars(args).get("make") == ["install"] \
-                or "make_install" in vars(args):
+        if vars(args).get("make") == ["install"] or "make_install" in vars(args):
             func_name = "make_install"
 
     arg = vars(args).get(func_name)
 
     # This can be made more secure by enforcing known
     # function targets. For example:
-    permitted = {
-        "init",
-        "add",
-        "make",
-        "compile",
-        "test",
-        "make_install"
-    }
-    '''Not needed yet
+    permitted = {"init", "add", "make", "compile", "test", "make_install"}
+    """Not needed yet
     zero_or_one = set((0, 1))
     many = set((i for i in range(1,999)))
 
@@ -625,52 +627,17 @@ def main(args: argparse.Namespace):
         "test": many,
         "make_install": many
     }
-    '''
+    """
     if func_name in permitted:
-        eval(f"{func_name}(arg)")
+        eval(f"{func_name}({arg})")
     else:
-        msg: str ='\033[91m'+f"{func_name} is not available."+'\033[0m'
+        msg: str = "\033[91m" + f"{func_name} is not available." + "\033[0m"
         print(msg)
         sys.exit(1)
 
-def run_once(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not wrapper.has_run:
-            result = f(*args, **kwargs)
-            wrapper.has_run = True
-            return result
-    wrapper.has_run = False
-    return wrapper
-
-@run_once
-def import_edb():
-    try:
-        # To import the bootstrapped `edb.edgeql.parser` we trick the Python
-        # importlib loader into checking foreign sources.
-        global qlparser
-        global markup
-        # global Schema
-        global serialize
-        os.chdir(EDB_MODULE_DIRECTORY)
-        from edb.edgeql import (parser,)
-        from edb.edgeql.ast import Schema as schema
-        # from edb.common import markup as Markup
-        from edb.common.markup import _serialize as Serialize
-        # In the future, it could be possible to simply run
-        # `from edb.graphql import parser as qlparser`; but for
-        # the time being, that is not available
-        qlparser = parser
-        # markup = Markup
-        # Schema = schema
-        serialize = Serialize
-        # Return home
-        os.chdir(INITIAL_WORKING_DIRECTORY)
-    except Exception as e:
-        raise(e)
 
 def usage():
-    return '''usage: edm { positional argument } { argument value }
+    return """usage: edm { positional argument } { argument value }
 
 positional arguments:
     help                shows this message
@@ -689,65 +656,59 @@ argument values:
     compile             [ edb_module_path ]
     test                [ database_name ]
 
-'''
+"""
 
-if __name__ == "__main__":
 
-    # These are unhealthy shims that can be removed in the future
-    INITIAL_WORKING_DIRECTORY = os.getcwd()
-    EDM_PATH = os.path.dirname(os.path.realpath(__file__))
-    EDB_MODULE_DIRECTORY = f"{EDM_PATH}/bootstrap/edgedb"
-    import_edb()
-
+def cli_main():
     # This shim may be a source of errors in the future.
     # Currently, it is responsible for allowing the argument
     # parser to allow argument names to not use dashed names
     lastarg = sys.argv[-1]
-    if len(sys.argv) > 1 and lastarg[0] != '-':
-        sys.argv[-1] = '-f'
+    if len(sys.argv) > 1 and lastarg[0] != "-":
+        sys.argv[-1] = "-f"
         sys.argv.append(lastarg)
 
     # The primary argument parser
-    edm_parser = argparse.ArgumentParser(
-            prog="edm",
-            usage=usage()
-            )
+    edm_parser = argparse.ArgumentParser(prog="edm", usage=usage())
 
     # Auxillary parsers beneath `edm_parser`
-    subparser   = edm_parser.add_subparsers()
-    edm_init    = subparser.add_parser("init")
-    edm_add     = subparser.add_parser("add")
-    edm_make    = subparser.add_parser("make")
+    subparser = edm_parser.add_subparsers()
+    edm_init = subparser.add_parser("init")
+    edm_add = subparser.add_parser("add")
+    edm_make = subparser.add_parser("make")
     make_subparsers = edm_make.add_subparsers()
     edm_make_install = make_subparsers.add_parser("install")
     edm_compile = subparser.add_parser("compile")
-    edm_test    = subparser.add_parser("test")
+    edm_test = subparser.add_parser("test")
 
     # `edm init`
-    edm_init.add_argument('-f',  dest='init', default=".", metavar="PROJECT_DIR")
+    edm_init.add_argument("-f", dest="init", default=".", metavar="PROJECT_DIR")
 
     # `edm add`
-    edm_add.add_argument('-f', dest='add', metavar="MODULE_FILE")
+    edm_add.add_argument("-f", dest="add", metavar="MODULE_FILE")
 
     # `edm make`: '.' means ./*.esdl ; '*' means **/*.esdl
-    edm_make.add_argument('-f',
-            default="*",
-            dest='make',
-            nargs='*',
-            metavar="SOURCE")
+    edm_make.add_argument("-f", default="*", dest="make", nargs="*", metavar="SOURCE")
 
     # `edm make install`
-    edm_make_install.add_argument('-f',
-            dest='make_install',
-            default='*',
-            nargs='*',
-            metavar="SOURCE")
+    edm_make_install.add_argument(
+        "-f",
+        dest="make_install",
+        default="*",
+        nargs="*",
+        metavar="SOURCE",
+    )
 
     # `edm compile`
-    edm_compile.add_argument('-f', dest='compile', metavar="SOURCE")
+    edm_compile.add_argument("-f", dest="compile", metavar="SOURCE")
 
     # `edm test`: '*' means all database connections in edgemorph.toml
-    edm_test.add_argument('-f', dest='test', nargs='*', metavar="MODULE DATABASE_IDENTITY")
+    edm_test.add_argument(
+        "-f",
+        dest="test",
+        nargs="*",
+        metavar="MODULE DATABASE_IDENTITY",
+    )
 
-    args, unknown = edm_parser.parse_known_args()
+    args, _ = edm_parser.parse_known_args()
     main(args)
