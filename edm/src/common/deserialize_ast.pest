@@ -1,6 +1,14 @@
-bin_address = _{  }
-
 id = { "None" | ('0'..'9'){15} }
+
+module = { 
+    "<" ~ "TreeNodeChild"
+     ~ "id" ~ "=" ~ id
+     ~ "label" ~ "=" ~ PEEK("declarations") 
+     ~ "node" ~ "=" ~ nodes ~ ">" 
+}
+node  = { ANY }
+
+nodes = { node+ }
 
 root = _{ SOI ~ ( schema | module ) ~ EOI }
 
@@ -11,12 +19,6 @@ schema = {
     ~ "children" ~ "=" ~"[" ~ module ~ "]" ~ ">"
 }
 
-module = { 
-    "<" ~ "TreeNodeChild"
-     ~ "id" ~ "=" ~ id
-     ~ "label" ~ "=" ~ PEEK("declarations") 
-     ~ "node" ~ "=" ~ nodes 
-     }
 
 tree_node_kind = {
       bin_op
