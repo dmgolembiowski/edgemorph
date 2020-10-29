@@ -1,4 +1,14 @@
-#### `TreeNode`
+use pest::iterators::{Pairs, Pair};
+use pest;
+use std::io::BufReader;
+use std::io::prelude::*;
+
+/// Derived from the official EdgeDB repository at `edb/edgeql/ast.py`
+///
+/// AST Nodes
+/// ---------
+///
+/// `TreeNode`
 /// - `id`: `<i32>`
 /// - `name`: _N<sub>T</sub>_ such that _N<sub>T</sub>_ &#8712; _T **&acute;**_ and  _T **&acute;**_ satisfies the size requirements for each of the following identifiers. :
 /// > ```python  
@@ -43,4 +53,56 @@
 ///   returning_typemod: Optional<TreeNodeChild>
 ///   ```
 /// 
+
+
+/// Seek to given rule in a sequence of pairs.
+///
+/// Usage:
+/// 
+///       let a_prefix = String::from(seek_to(pairs, &Rule::TEXT).unwrap().as_str());
+///
+///       let int_id = String::from(seek_to(pairs, &Rule::LONG).unwrap().as_str()).parse::<u64>().unwrap();
+///
+/// Credits to: PetrGlad (https://github.com/pest-parser/pest/issues/405#issue-481147665)
+pub fn seek_to<'a, R: pest::RuleType>(
+            pairs: &mut Pairs<'a, R>, to: &R ) -> Option<Pair<'a, R>> 
+{
+    for p in pairs {
+        if p.as_rule() == *to {
+            return Some(p);
+        }
+    }
+    None
+}
+
+/// Find first pair at given rule path.
+///
+/// Usage:
+/// 
+///       let name = String::from(seek_in(pairs, &[Rule::Name, Rule::IdOrReservedWord, Rule::ID]).unwrap().as_str());
+///
+/// Credits to: PetrGlad (https://github.com/pest-parser/pest/issues/405#issue-481147665)
+pub fn seek_in<'a, R: pest::RuleType>(
+                pairs: &mut Pairs<'a, R>, 
+                to_path: &[R]) -> Option<Pair<'a, R>>
+{
+    match to_path {
+        [] => None,
+        [r] => seek_to(pairs, r),
+        rs => match seek_to(pairs, &rs[0]) {
+            Some(r) => seek_in(&mut r.into_inner(), &to_path[1..]),
+            None => None
+        }
+    }
+}
+
+fn load_ast_file(path: &str) -> std::io::Result<String> {
+    let file = File::open(path.to_owned())?;
+    let mut buf_reader = BufReader::new(file);
+    let mut contents = String::new();
+    buf_reader.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
+
 

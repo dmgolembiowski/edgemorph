@@ -1,0 +1,60 @@
+bin_address = _{  }
+
+id = { "None" | ('0'..'9'){15} }
+
+root = _{ SOI ~ ( schema | module ) ~ EOI }
+
+schema = { 
+    "<" ~ "TreeNode"
+    ~ "id" ~ "=" ~ id
+    ~ "name" ~ "=" ~ PEEK("Schema")
+    ~ "children" ~ "=" ~"[" ~ module ~ "]" ~ ">"
+}
+
+module = { 
+    "<" ~ "TreeNodeChild"
+     ~ "id" ~ "=" ~ id
+     ~ "label" ~ "=" ~ PEEK("declarations") 
+     ~ "node" ~ "=" ~ nodes 
+     }
+
+tree_node_kind = {
+      bin_op
+    | create_concrete_link
+    | create_concrete_property
+    | create_function
+    | create_object_type
+    | delete_query
+    | for_query
+    | function_param
+    | function_call
+    | function_code
+    | insert_query
+    | integer_constant
+    | module_alias_declaration
+    | module_declaration
+    | object_ref
+    | path
+    | ptr
+    | schema
+    | select_query
+    | set
+    | set_field
+    | shape_element
+    | shape_operation
+    | string_constant
+    | type_cast
+    | type_name
+    | update_query
+    | 
+}
+    
+__ignored_misc = _{
+      " " 
+    | "," 
+    | "trimmed=False"
+    | "brackets='[]'"
+    | ("at 0x" ~ ASCII_ALPHANUMERIC{12})
+    | ("edb." ~ ( ASCII_ALPHA_LOWER* ~ "." )+ )
+
+}
