@@ -88,11 +88,11 @@ string_kind_cardinality = @{
     "<" ~ "String" ~ "str" 
     ~ "=" ~ "<Schema" 
           ~ ( 
-                PEEK(cardinality_one) | 
-                PEEK(cardinality_many) |
-                PEEK(cardinality_at_most_one) |
-                PEEK(cardinality_at_least_one) |
-                PEEK(cardinality_unknown)
+                cardinality_one | 
+                cardinality_many |
+                cardinality_at_most_one |
+                cardinality_at_least_one |
+                cardinality_unknown
           )
     ~ ">"   
 }
@@ -111,7 +111,7 @@ root = _{ SOI ~ ( schema | module ) ~ EOI }
 schema = { 
     "<" ~ "TreeNode" 
     ~ "id" ~ "=" ~ id
-    ~ "name" ~ "=" ~ PEEK("Schema")
+    ~ "name" ~ "=" ~ "Schema"
     ~ "children" ~ "=" ~"[" ~ module ~ "]" ~ ">"
 }
 
@@ -120,7 +120,7 @@ string_kind = {
     | string_kind_raw_literal
 }
 
-str_value = { PEEK(!(__forbidden_char))+  }
+str_value = { !(__forbidden_char)+  }
 // `str_value` should hit a single-quote
 
 tree_node = {
