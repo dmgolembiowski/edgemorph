@@ -1,0 +1,169 @@
+// Deserialization Logic for EdgeQL AST parser
+// via Pest Grammar
+
+atomic_node = {
+      bin_op
+    | create_alias
+    | create_concrete_link
+    | create_concrete_property
+    | create_function
+    | create_index
+    | create_link
+    | create_object_type
+    | delete_query
+    | for_query
+    | func_param
+    | function_call
+    | function_code
+    | insert_query
+    | integer_constant
+    | module_alias_declaration
+    | module_declaration
+    | object_ref
+    | path
+    | ptr
+    | schema
+    | select_query
+    | set
+    | set_field
+    | shape_element
+    | shape_operation
+    | string_constant
+    | type_cast
+    | type_name
+    | update_query
+    | 
+}
+
+brackets = @{ "'[]'" | "'()'" | "'{}'" }
+
+checked_list = {
+    "CheckedList" ~ "[" ~ ( "TreeNodeChild" | "Markup" ) ~ "]"
+    ~ "(" ~ "[" ~ ( tree_node_child | tree_node )+ ~ "]" ~ ")"
+}
+
+id = @{ "None" | ('0'..'9'){15} }
+
+// `list_kind` seems to be a subset of `checked_list` 
+// -- supporting only "Markup" elements
+list_kind = {
+    "<" 
+    ~ "List"
+    ~ "id" ~ "=" ~ id
+    ~ "items" ~ "=" ~ checked_list
+    ~ ">"
+}
+
+// `module` is a special case of the the `tree_node_child`
+module = { 
+     ~ "[" ~ "<" 
+     ~ "TreeNodeChild"
+     ~ "id" ~ "=" ~ id
+     ~ "label" ~ "=" ~ PEEK("'declarations'") 
+     ~ "node" ~ "=" ~ module_node 
+     ~ ">" ~ "]"
+}
+
+module_declaration = {
+    "<" ~ "TreeNode"
+    ~ "id" ~ "=" ~ id
+    ~ "name" ~ "=" ~ "'ModuleDeclaration'"  // A better approach likely
+    ~ "children" ~ "=" ~ "CheckedList"     // exists to statically
+    ~ "[" ~ "TreeNodeChild" ~ "]"         // check for the `ModuleDeclaration`
+    ~ "<" ~ "label" ~ "=" ~ "'name'"     // name via `PEEK` or `PUSH/POP`
+    ~ "node" ~ "=" ~ tree_node
+}
+
+// `module_node_list` seems to be a 
+// special case of `checked_list`
+module_node = {
+    "<" ~ "List"
+    ~ "id" ~ "=" ~ id
+    ~ "items" ~ "=" ~ "CheckedList"
+    ~ "[" ~ "Markup" ~ "]"
+    ~ "(" ~ "[" ~ module_declaration ~ "]" ~ ")"
+}
+
+string_kind_cardinality = @{ 
+    "<" ~ "String" ~ "str" 
+    ~ "=" ~ "<Schema" 
+          ~ ( 
+                PEEK(cardinality_one) | 
+                PEEK(cardinality_many) |
+                PEEK(cardinality_at_most_one) |
+                PEEK(cardinality_at_least_one) |
+                PEEK(cardinality_unknown)
+          )
+    ~ ">"   
+}
+
+// Cardinality Atoms
+cardinality_one          = @{ "Cardinality.One: 'One'" }
+cardinality_many         = @{ "Cardinality.Many: 'Many'" }
+cardinality_at_most_one  = @{ "Cardinality.AtMostOne: 'AtMostOne'" }
+cardinality_at_least_one = @{ "Cardinality.AtLeastOne: 'AtLeastOne'" }
+cardinality_unknown      = @{ "Cardinality.Unknown: 'Unknown'" }
+
+string_kind_raw_literal = { "<" ~ "String" ~ "str" ~ "=" ~ str_value ~ ">" }
+
+root = _{ SOI ~ ( schema | module ) ~ EOI }
+
+schema = { 
+    "<" ~ "TreeNode" 
+    ~ "id" ~ "=" ~ id
+    ~ "name" ~ "=" ~ PEEK("Schema")
+    ~ "children" ~ "=" ~"[" ~ module ~ "]" ~ ">"
+}
+
+string_kind = {
+      string_kind_cardinality
+    | string_kind_raw_literal
+}
+
+str_value = { PEEK(!(__forbidden_char))+  }
+// `str_value` should hit a single-quote
+
+tree_node = {
+    "<" ~ "TreeNode"
+    ~ "id" ~ "=" ~ id
+    ~ "name" ~ "=" ~ (!">" ~ str_value ~ ">"
+    ~ "children" ~ "=" ~ checked_list ~ ">"
+    ( "brackets" ~ "=" brackets )?
+}
+
+tree_node_child = {
+    "<" ~ "TreeNodeChild"
+    ~ "id" ~ "=" ~ id
+    ~ "label" ~ label
+    ~ "node"  ~ "=" ~ rhs ~ ">"
+}
+
+rhs = {
+      list_kind 
+    | string_kind 
+    | tree_node_kind
+    | true_constant_type_kind
+}
+
+true_constant_type_kind = @{ "<TrueConstantType>" }
+
+// These are characters which cannot used used in
+// raw-literal strings that resemble words. No math 
+// operators, no brackets, etc. 
+__forbidden_char = @{
+    | " " | "," | "`" | "~" | "!" | "@" | "."
+    | "#" | "$" | "%" | "^" | "&" | "*" | "-"
+    | "+" | "=" | "\\" | "|" | ":" | ";" | "?" | "/"
+    | "(" | ")" | "[" | "]" | "<" | ">" | "{" | "}"
+    | "\"" | "'"
+}
+    
+__ignored_misc = _{
+      " " 
+    | "," 
+    | NEWLINE
+    | "trimmed=False"
+    | ("at 0x" ~ ASCII_ALPHANUMERIC{12})
+    | ("edb." ~ ( ASCII_ALPHA_LOWER* ~ "." )+ )
+
+}
