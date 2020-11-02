@@ -1,6 +1,7 @@
 use pest::iterators::{Pairs, Pair};
 use pest;
-use std::io::BufReader;
+use std::fs::File;
+use std::io::{BufReader};
 use std::io::prelude::*;
 
 /// Derived from the official EdgeDB repository at `edb/edgeql/ast.py`

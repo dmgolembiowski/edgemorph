@@ -5,3 +5,8 @@ pub mod install;
 pub mod compile;
 pub mod test;
 pub mod common;
+
+#[cfg(test)]
+extern crate test_case;
+
+
