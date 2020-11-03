@@ -23,9 +23,6 @@ name = "cpython"
 version = "0.5.1"
 features = ["extension-module"]
 
-[build]
-rustflags = ["-C", "link-args=-export-dynamic"] 
-
 [target.x86_64-apple-darwin]
 rustflags = [
   "-C", "link-arg=-undefined",
@@ -39,5 +36,4 @@ path = "src/tests/base.rs"
 [dev-dependencies]
 trybuild = { version = "1.0", features = ["diff"] }
 test-case = { version = "1.0.0" }
-goblin = "0.2.3"
 
