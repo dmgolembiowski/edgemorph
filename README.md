@@ -1,3 +1,6 @@
+### ⚠️ WIP ⚠️ 
+##### _Notice: This project is under development and is not appropriate for production projects._ 
+
 ![EdgemorphBanner](/banner.png)
 
 #### Continue Writing EdgeQL as Normal
@@ -58,7 +61,7 @@ edgedb_app = "edb_modules/edgedb_app.esdl"
 
 Unlike traditional object-relational mappers, Edgemorph requires users to write database-level code. Using EdgeDB's rich query language, Edgemorph combines the strictly typed qualities of EdgeDB with a library-factory written in Rust. This unconventional strategy allows users to compile entirely custom bytecode libraries on a per-project basis, but continue to program in the stylings of a typical ORM.
 
-For instance, if we have an EdgeDB module within the `user.edgeql` file, then executing `edm compile -f user.edgeql` would compile the user module to return both a dynamic library, `edm_user.so`, as well as a native code file in Rust or Python for reaching it. Currently, I am only planning to support Rust and Python  API outputs, however I would like JavaScript, either via `wasm32` architecture or pure JS, to join the adventure as well.
+For instance, if we have an EdgeDB module within the `user.esdl` file, then executing `edm compile -f user.esdl` would compile the user module to return both a dynamic library, `edm_user.so`, as well as a native code file in Rust or Python for reaching it. Currently, I am only planning to support Rust and Python  API outputs, however I would like JavaScript, either via `wasm32` architecture or pure JS, to join the adventure as well.
 
 Here are examples of what the compiler generates in Rust and Python given the EdgeQL above.
 
@@ -119,3 +122,4 @@ class User:
 ```
 
 In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
+
