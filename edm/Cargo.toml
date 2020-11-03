@@ -3,16 +3,28 @@ name = "edm"
 version = "0.1.0"
 authors = ["David Golembiowski <david@dgolembiowski.com>"]
 edition = "2018"
+autotests = false
 crate-type = ["cdylib"]
 
 [dependencies]
 clap = "2.33.3"
 pest = "2.1.3"
+pest_derive = "2.1.0"
+proc-macro2 = "1.0.24"
+quote = "1.0.7"
+
+[dependencies.paste]
+name = "paste" # version = "1.0.2"
+git = "https://github.com/scalexm/paste.git"
+branch = "attr"
 
 [dependencies.cpython]
 name = "cpython"
 version = "0.5.1"
 features = ["extension-module"]
+
+[build]
+rustflags = ["-C", "link-args=-export-dynamic"] 
 
 [target.x86_64-apple-darwin]
 rustflags = [
@@ -20,6 +32,12 @@ rustflags = [
   "-C", "link-arg=dynamic_lookup",
 ]
 
+[[test]]
+name = "tests"
+path = "src/tests/base.rs"
+
 [dev-dependencies]
-edgemorph = { path = "../edgemorph" }
+trybuild = { version = "1.0", features = ["diff"] }
+test-case = { version = "1.0.0" }
+goblin = "0.2.3"
 
