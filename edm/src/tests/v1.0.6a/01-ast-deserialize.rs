@@ -1,10 +1,9 @@
 use test_case::test_case;
-use pest::Parser;
+use pest::{Parser};
 use pest_derive::Parser;
-use quote::{quote};
-use proc_macro2::TokenStream;
 
-mod helper; 
+use quote::{quote};
+use proc_macro2::TokenStream; 
 
 #[test_case(
     /* gram_path  = */ "tests/v1.0.6a/pest/empty_module.pest", 
@@ -33,35 +32,36 @@ fn test_deserialization(
     let func_arg = quote! { ast_output.borrow(); };
     let anno = quote! { test_func_anno.to_owned(); };
 
-
+    
     let expanded = quote! {
-        //let actual = common::deserialize(&Deserializer, &ast_output);
-        let actual = Deserializer::parse(Rule::ident_list, *ast_output);
-        let theoretical: #anno = helper::dyn_call!(#func(#func_arg));
-        assert_eq!(actual, theoretical);
+        match #func.to_string() {
+            "build_empty_module" => {
+                //let actual = common::deserialize(&Deserializer, &ast_output);
+                let actual = Deserializer::parse(Rule::ident_list, ast_output);
+                let theoretical: #anno = #func(#func_arg);
+                let res = assert_eq!(actual, theoretical);
+                match res {
+                    false => { panic!("Failed to compile."); },
+                    _ => {}
+                }
+            },
+        }
     };
 
-    /* "[Parse] the function name (either a string literal or 
-       an ident for an &str variable) and the args in the function 
-       call syntax. 
-       [Then ... take] the function name and passes it to [helper::get_sym], 
-       which is just a function for reading the executable from the first arg 
-       passed and getting a pointer to a dynsym by name. 
-       It then transmutes it to a function pointer so we can call it." -Jam
-       */
     TokenStream::from(expanded);
     
 }
 
 // This is merely a dummy to verify that the dynamic dispatch
 // for the test harness works properly.
+#[allow(dead_code)]
 pub struct Schema {
     declarations: Vec<i32>
 }
 
-#[no_mangle]
-pub extern "Rust" fn build_empty_module(ast_path: &str) -> Schema {
+#[allow(dead_code)]
+fn build_empty_module(ast_path: &str) -> Schema {
     Schema { declarations: vec![1] }
 }
-
+#[allow(dead_code)]
 fn main() {}
