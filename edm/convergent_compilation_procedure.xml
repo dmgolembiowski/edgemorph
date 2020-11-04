@@ -1,14 +1,37 @@
-<mxfile host="app.diagrams.net" modified="2020-11-04T02:06:57.768Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36" etag="F0zdI6Xtp_AIB0-zj3qO" version="13.8.9-1" type="github">
+<mxfile host="app.diagrams.net" modified="2020-11-04T02:20:13.805Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36" etag="TQD-uwG7zKk_h53rnvBU" version="13.8.9-1" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
     <mxGraphModel dx="1248" dy="689" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
+        <mxCell id="M4HaMkv4449mrAGwd_om-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-4" target="M4HaMkv4449mrAGwd_om-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="410" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-4" value="" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;dashed=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="310" y="240" width="55" height="60" as="geometry" />
+        </mxCell>
         <mxCell id="M4HaMkv4449mrAGwd_om-1" value="&lt;h1&gt;Convergent Compilation Process&lt;/h1&gt;&lt;p&gt;&lt;span&gt;Edgemorph is a tightly coupled compiler framework and relational data mapper for EdgeDB. As the preamble implies, the level of complexity involved is almost equivalent to an entire programming language&#39;s compiler. Whereas a language&#39;s compiler could have a fixed target like an LLVM or a lower-level machine architecture, Edgemorph has one direct target, the Rust programming language, and two auxillary targets, (1) EdgeDB, and (2) the shared object file produced by cargo&#39;s build process.&lt;/span&gt;&lt;/p&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="40" y="40" width="490" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="M4HaMkv4449mrAGwd_om-2" value="EdgeDB schema module file" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
-          <mxGeometry x="40" y="210" width="120" height="60" as="geometry" />
+        <mxCell id="M4HaMkv4449mrAGwd_om-5" value="mock &lt;br&gt;transaction for&lt;br&gt;dummy module, &lt;b&gt;&lt;i&gt;m&lt;sub&gt;i&amp;nbsp;&amp;nbsp;&lt;/sub&gt;&lt;/i&gt;&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" target="M4HaMkv4449mrAGwd_om-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="160" y="270" as="sourcePoint" />
+            <mxPoint x="290" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-2" value="EdgeDB schema module file" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeWidth=2;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="40" y="240" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-3" value="" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="322.5" y="250" width="30" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-8" value="&lt;meta charset=&quot;utf-8&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-family: helvetica; font-size: 12px; font-style: normal; font-weight: 400; letter-spacing: normal; text-align: center; text-indent: 0px; text-transform: none; word-spacing: 0px; background-color: rgb(248, 249, 250); display: inline; float: none;&quot;&gt;Perform INTROSPECTION query and read results&lt;/span&gt;" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=process;whiteSpace=wrap;rounded=1;size=0.14;arcSize=6;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="430" y="226.25" width="210" height="87.5" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-10" value="&lt;font style=&quot;font-size: 12px&quot;&gt;Serialized Introspection Representation&lt;br&gt;( SIR )&lt;br&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="455" y="240" width="160" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
