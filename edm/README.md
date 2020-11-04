@@ -2,6 +2,7 @@
 _the command line tool for the edgemorph framework_
 
 ***
+![edm-compile-proc](https://raw.githubusercontent.com/dmgolembiowski/edgemorph/master/docs/v1/rust/assets/convergent_compilation_procedure.svg)
 
 ## Formal specification
 
