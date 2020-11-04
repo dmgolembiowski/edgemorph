@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2020-11-04T02:52:56.559Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36" etag="2VNMwPaBOC8WeVuH241s" version="13.8.9-1" type="github">
+<mxfile host="app.diagrams.net" modified="2020-11-04T04:03:12.094Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36" etag="VEKsr7C6ACSf3emTiMje" version="13.8.9-1" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="1248" dy="689" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1248" dy="689" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -78,6 +78,9 @@
         <mxCell id="M4HaMkv4449mrAGwd_om-26" value="Deserialized&lt;br&gt;Introspective&lt;br&gt;Representation&lt;br&gt;( &lt;b&gt;DIR&lt;/b&gt; )" style="shape=parallelogram;html=1;strokeWidth=2;perimeter=parallelogramPerimeter;whiteSpace=wrap;rounded=1;arcSize=12;size=0.23;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="850" y="580" width="160" height="60" as="geometry" />
         </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-29" target="M4HaMkv4449mrAGwd_om-41">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="M4HaMkv4449mrAGwd_om-29" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=mxgraph.flowchart.collate;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="485" y="560" width="100" height="100" as="geometry" />
         </mxCell>
@@ -90,8 +93,120 @@
         <mxCell id="M4HaMkv4449mrAGwd_om-41" value="IR compilation" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_2;whiteSpace=wrap;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="485" y="690" width="100" height="100" as="geometry" />
         </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-49" value="&amp;nbsp;No&amp;nbsp;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-43" target="M4HaMkv4449mrAGwd_om-47">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-43" target="M4HaMkv4449mrAGwd_om-51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-53" value="&amp;nbsp;Yes&amp;nbsp;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="M4HaMkv4449mrAGwd_om-52">
+          <mxGeometry x="-0.5155" y="-6" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
         <mxCell id="M4HaMkv4449mrAGwd_om-43" value="All IR present?" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
           <mxGeometry x="640" y="720" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-50" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-47" target="M4HaMkv4449mrAGwd_om-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="685" />
+              <mxPoint x="1030" y="210" />
+              <mxPoint x="100" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-47" value="Get next module to IR" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="880" y="660" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-60" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-51" target="M4HaMkv4449mrAGwd_om-57">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-51" value="" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=process;whiteSpace=wrap;rounded=1;size=0.14;arcSize=6;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="730" y="820" width="160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-89" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-55" target="M4HaMkv4449mrAGwd_om-79">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-55" value="" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="732.5" y="1273" width="155" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-56" value="Compare MD5 digests of IR and disk-cache.&lt;br&gt;&amp;nbsp;&lt;br&gt;Update new changes" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="755" y="840" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-63" value="&amp;nbsp;No&amp;nbsp;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-57" target="M4HaMkv4449mrAGwd_om-62">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-68" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-57" target="M4HaMkv4449mrAGwd_om-55">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-69" value="&amp;nbsp;Yes&amp;nbsp;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="M4HaMkv4449mrAGwd_om-68">
+          <mxGeometry x="-0.2124" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-57" value="Same MD5?" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="760" y="990" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-58" value="Control-Flow Graph&amp;nbsp; (Lazily-loaded from chunks)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="737.5" y="1280" width="145" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-66" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-62" target="M4HaMkv4449mrAGwd_om-64">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-62" value="Build a new&lt;br&gt;&amp;nbsp;Control-Flow Graph&lt;br&gt;from IR nodes" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="920" y="1005" width="140" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-64" value="For each node, &lt;br&gt;test that all of its&lt;br&gt;links, aliases,&lt;br&gt;identities, and declarations have valid resolutions." style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="920" y="1090" width="140" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-80" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-64" target="M4HaMkv4449mrAGwd_om-79">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="943" y="1343" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="990" y="1400" />
+              <mxPoint x="600" y="1400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-84" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-79" target="M4HaMkv4449mrAGwd_om-83">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-79" value="Convert CFG&lt;br&gt;to a series&lt;br&gt;of codegen units" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="550" y="1278" width="100" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-87" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-83" target="M4HaMkv4449mrAGwd_om-86">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-83" value="Render codegen&lt;br&gt;units as intermediate Rust crate mods &lt;br&gt;(via templating engine)" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="350" y="1278" width="135" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-91" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-86" target="M4HaMkv4449mrAGwd_om-90">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-86" value="For each non-Rust language binding, generate a client API file for exposing all relevant structs, traits, and functions. Also&lt;br&gt;prepare the native language&lt;br&gt;adapter files." style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="100" y="1278" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-93" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-90" target="M4HaMkv4449mrAGwd_om-92">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-90" value="Run the cargo build&lt;br&gt;command on the&lt;br&gt;intermediate crate, generating the shared object" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="110" y="1075" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-95" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-92" target="M4HaMkv4449mrAGwd_om-94">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-92" value="Copy the custom shared object and API-binding file(s) to the client&#39;s designated directories." style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="130" y="880" width="120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-97" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="M4HaMkv4449mrAGwd_om-94" target="M4HaMkv4449mrAGwd_om-96">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-94" value="Commit the&lt;br&gt;project&#39;s schema&lt;br&gt;to the EdgeDB&lt;br&gt;instance." style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="145" y="710" width="90" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="M4HaMkv4449mrAGwd_om-96" value="EXIT" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="310" y="720" width="100" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
