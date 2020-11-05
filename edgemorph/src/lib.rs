@@ -20,11 +20,7 @@ pub fn _new_object_type(ident: &str) -> Type {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
+ 
     #[test]
     fn gen_scalar() {
         let identity = "Double";
