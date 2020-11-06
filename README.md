@@ -130,14 +130,16 @@ Python 3.8+, Poetry, Git, and Rust nightly installed._
 # Have Python 3.8+, Poetry, and Rust nightly installed
 git clone https://github.com/dmgolembiowski/edgemorph.git
 cd edgemorph
-git submodule update --init --recursive
+git submodule init
+git submodule update --recursive
 cd edm
 poetry shell
 poetry install
-cd bootstrap/edgedb
-python -m pip install -v -e .
+cd bootstrap/edgedb-python && python -m pip install -e .
+cd ../../bootstrap/edgedb && python -m pip install -v -e .
 
 # And viola! You can now run `edm` based commands.
+edm init app
 ```
 ## Roadmap (incomplete)
 ***
