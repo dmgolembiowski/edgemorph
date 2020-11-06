@@ -144,14 +144,14 @@ cd ../edgedb && python setup.py install -v -e . # Note, this takes a while
 ***
 ### EDM Features
 - [X] `edm init`
-- [] `edm make` 
-  - [X] simple offline SDL syntax checker
-  - [X] hidden AST dump to EDB modules file
-  - [X] "makeability" protected by project-level configuration file `edgemorph.toml`
-  - [] single and (concurrent) multi-file lex checking
-- [] `edm add`
-- [] `edm make install`
-- [] `edm test`
+- [ ] `edm make` 
+- [X] simple offline SDL syntax checker
+- [X] hidden AST dump to EDB modules file
+- [X] "makeability" protected by project-level configuration file `edgemorph.toml`
+- [ ] single and (concurrent) multi-file lex checking
+- [ ] `edm add`
+- [ ] `edm make install`
+- [ ] `edm test`
 
 In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
 
