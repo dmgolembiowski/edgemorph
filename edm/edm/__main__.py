@@ -283,8 +283,7 @@ def make(target: str):
 
     # Finally, the moment of truth, calling `compile` on these paths
     if retrieved:
-        print("Compiling your EdgeDB modules....")
-        sleep(1)
+        print("Compiling your EdgeDB modules....\n") 
         batch_compilation(retrieved)
     sys.exit()
 
@@ -295,8 +294,7 @@ def batch_compilation(module_paths: List[str]):
     async_pool = multiprocessing.Pool(processes=poolsize)
     timed_out: bool = False
     results = []
-    import IPython
-
+ 
     with async_pool as pool:
         async_jobs = [pool.apply_async(compile, module_paths) for i in range(poolsize)]
         try:
@@ -307,40 +305,23 @@ def batch_compilation(module_paths: List[str]):
             timed_out = True
     if timed_out:
         sys.exit(1)
-    print("varslist: async_pool, timed_out, results, async_jobs, async_res")
-    _ = [
-        re.subn(r" at\s0x............", "", str(serialize(tt)))[0].replace(" ", "")
-        for tt in results
-    ]
-    # re.subn(r" at\s0x............", "", st)
-    IPython.embed()
 
-
-"""
-class AST(io.StringIO):
-    def __init__(self, **kwargs):
-        self._raw: str
-        self._sanitized: bool = False
-        #self._schema: Optional[Schema] = None
-        self._schema = None
-        super().__init__(**kwargs)
-    def write(self, ast_content: str) -> None:
-        self._raw = ast_content
-    def read(self) -> str:
-        return self._raw
-    @schema.setter
-    def schema(self, new_schema):
-        #def schema(self, new_schema: Schema):
-        self._schema = new_schema
-    @property
-    def schema(self): # -> Schema:
-        return self._schema
-    def serialize(self):
-        raise NotImplemented
-    def deserialize(self):
-        raise NotImplemented
-"""
-
+    for i in range(poolsize):
+        
+        """
+        Assume that paths are given as:
+        `/path/to/(edb_modules/repositories)/model.esdl`
+        so keeping the folder constant, we modify the
+        destination as `"." + f"{filename}" + ".desastr"`
+        """
+        
+        ast_tree = str(serialize(results[i]))
+        ast_src  = module_paths[i]
+        folder   = str(ast_src.parent) 
+        filename = "." + ast_src.name.rstrip(".esdl") + ".desastr"
+        ast_path = folder + "/" + filename
+        with open(ast_path, "w") as desastr_file:
+            desastr_file.write(ast_tree)
 
 class Box:
     def __init__(self, ty: Any):
@@ -362,7 +343,10 @@ def memcache(key: str, value: Optional[Box]) -> Optional[Box]:
     if key not in __datastore__ and value is not None:
         __datastore__[key] = value
     elif value is None:
-        return None
+        try:
+            return __datastore__[key]
+        except:
+            return None
     return __datastore__[key]
 
 
@@ -614,22 +598,9 @@ def main(args: argparse.Namespace):
 
     # This can be made more secure by enforcing known
     # function targets. For example:
-    permitted = {"init", "add", "make", "compile", "test", "make_install"}
-    """Not needed yet
-    zero_or_one = set((0, 1))
-    many = set((i for i in range(1,999)))
-
-    option_cardinality = {
-        "init": zero_or_one,
-        "add": many,
-        "make": many,
-        "compile": many,
-        "test": many,
-        "make_install": many
-    }
-    """
+    permitted = {"init", "add", "make", "compile", "test", "make_install"} 
     if func_name in permitted:
-        eval(f"{func_name}({arg})")
+        eval(f"{func_name}('{arg}')")
     else:
         msg: str = "\033[91m" + f"{func_name} is not available." + "\033[0m"
         print(msg)
