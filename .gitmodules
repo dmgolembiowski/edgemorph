@@ -1,3 +1,6 @@
 [submodule "edm/bootstrap/edgedb"]
 	path = edm/bootstrap/edgedb
 	url = https://github.com/edgedb/edgedb.git
+[submodule "edm/bootstrap/edgedb-python"]
+	path = edm/bootstrap/edgedb-python
+	url = https://github.com/edgedb/edgedb-python
