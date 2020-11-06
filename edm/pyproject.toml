@@ -5,8 +5,7 @@ description = "Python prototype of EDM compiler"
 authors = []
 packages = [
     { include = "edm" },
-    { include = "edb", from = "./bootstrap/edgedb" },
-    { include = "edgedb", from = "./bootstrap/edgedb-python" }
+    { include = "edb", from = "./bootstrap/edgedb" }
 ]
 
 [tool.poetry.scripts]

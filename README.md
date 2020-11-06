@@ -121,5 +121,25 @@ class User:
     }
 ```
 
+#### Development / Build Instructions for `edm`
+
+_Note: Pre-requisite dependencies include having
+Python 3.8+, Poetry, Git, and Rust nightly installed._
+
+```bash
+# Have Python 3.8+, Poetry, and Rust nightly installed
+git clone https://github.com/dmgolembiowski/edgemorph.git
+cd edgemorph
+git submodule update --init --recursive
+cd edm
+poetry shell
+poetry install
+cd bootstrap/edgedb-python
+python setup.py install -v -e .
+cd ../edgedb && python setup.py install -v -e . # Note, this takes a while
+
+# And viola! You can now run `edm` based commands.
+```
+
 In the future, I would like to see `edm` support multi-language target compilation so that changes to the native programming language code can result be retrofitted onto the original shema with either DDL modifications or 1-to-1 SDL modifications.
 
