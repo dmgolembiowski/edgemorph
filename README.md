@@ -134,9 +134,8 @@ git submodule update --init --recursive
 cd edm
 poetry shell
 poetry install
-cd bootstrap/edgedb-python
-python setup.py install -v -e .
-cd ../edgedb && python setup.py install -v -e . # Note, this takes a while
+cd bootstrap/edgedb
+python -m pip install -v -e .
 
 # And viola! You can now run `edm` based commands.
 ```
