@@ -15,10 +15,11 @@ from copy import copy
 from pathlib import Path
 from time import sleep
 from typing import Any, Callable, List, Optional, Union
-
+import json
 import toml
 from edb.common.markup import _serialize as serialize
 from edb.edgeql import parser as qlparser
+import pprint
 
 __datastore__ = {}
 
@@ -113,10 +114,105 @@ def init(loc: str = ".") -> Result:
 
 }}"""
         f.write(stream)
-        sys.stdout.write("\033[;1m")
-        print(f"Success! Your project was created at {project_dir}")
+    
+    # Initialize a credentials file for the client
+    cred_file = f"{project_dir}/credentials.json"
+    init_credentials_file(cred_file)
+    
+    hype_print(f"Success! Your project was created at {project_dir}")
 
+def hype_print(msg: str):
+    sys.stdout.write("\033[;1m")
+    print(msg)
 
+def hype_input(msg: str):
+    sys.stdout.write("\033[1;m")
+    response = input(msg)
+    return response
+
+def init_credentials_file(loc: str):
+    
+    """init_credentials_file(loc: str)
+
+    This function interactively creates the `credentials.json`
+    file. `loc` is expected to be the absolute path to the
+    JSON file to be written by this procedure.
+    """
+
+    # Called at the end for saving credentials
+    def save_credentials_file(path: str, creds: dict):
+        with open(path, "w") as cred_file:
+            json.dump(creds, cred_file, indent=2)
+
+    # Effective start point begins here
+    msg = (
+        "Do you want to populate a `credentials.json` file now? " 
+        "[ (Y)es | (N)o {default} | (S)kip ]: "
+    )
+    
+    build_cred: bool
+
+    while True:
+        resp = hype_input(msg)
+        resp = resp.lower()
+        if resp in set(("y", "1", "yes")):
+            build_cred = True
+            break
+        elif resp in set(("n", "0", "no", " ", "")):
+            build_cred = False
+            break
+        elif resp in set(("skip", "s")):
+            print("INFO: Edgemorph may not function properly without credentials.")
+            return
+        else:
+            print(red(f"ERROR: Response {resp} not understood."))
+            continue
+    
+    def generate_template():
+        return dict([
+            ("port", "5656"),
+            ("user", "edgedb"),
+            ("password", ""),
+            ("database", "edgemorph")
+        ])
+
+    base_template = generate_template()
+
+    if build_cred:
+        while True:
+            # intentional copy here
+            base = generate_template()
+            for (key, value) in base.items():
+                resp = hype_input(f"Enter the value for `{key}` (default: `{value}`): ")
+                if resp == "":
+                    resp = value
+                base[key] = resp
+            
+            port: int
+            
+            try:
+                port = int(base.get("port"))
+            except:
+                port = 5656
+
+            verify_msg: str = (
+                "Is this correct?\n"
+                f"{pprint.pformat(str(base), indent=2)}\n"
+                "[ (Y)es | (N)o ]: "
+            )
+
+            resp = hype_input(verify_msg)
+            if resp.lower() not in set(("yes", "y")):
+                continue
+            else:
+                save_credentials_file(loc, base)
+                return
+    else:
+        base_template["port"] = int(base_template["port"])
+        save_credentials_file(loc, base_template)
+        hype_print("Saving default credentials file...")
+        return
+    
 def glob_paths(cwd: Path, rel_path: Path) -> Path:
     return cwd.joinpath(*[inode for inode in rel_path.parts if inode not in cwd.parts])
 
