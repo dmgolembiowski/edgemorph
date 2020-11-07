@@ -7,6 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 derive_builder = "0.9.0"
-edgeql-parser = { git = "https://github.com/edgedb/edgedb", version = "0.1.0" }
-edgedb-protocol = { git = "https://github.com/edgedb/edgedb-rust", version = "0.1.0" }
-edgemorph = { path = "../edgemorph" }
+edgeql-parser = {git = "https://github.com/edgedb/edgedb"}
+edgedb-protocol = { git = "https://github.com/edgedb/edgedb-rust" }
+map_vec = "0.3.0"
+# edgemorph = { path = "../edgemorph" }
