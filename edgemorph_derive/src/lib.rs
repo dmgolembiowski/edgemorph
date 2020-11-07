@@ -62,10 +62,10 @@ fn make_box_vec(data: &Data) -> TokenStream {
                         #(#recurse)*
                     }
                 }
-                _ => unimplemented!()
+                _ => todo!()
             }
         }
-        Data::Enum(_) | Data::Union(_) => unimplemented!(),
+        Data::Enum(_) | Data::Union(_) => todo!(),
     }
 }
 
@@ -85,10 +85,10 @@ fn make_weak_refcell(data: &Data) -> TokenStream {
                         #(#recurse)*
                     }
                 }
-                _ => unimplemented!()
+                _ => todo!()
             }
         }
-        Data::Enum(_) | Data::Union(_) => unimplemented!(),
+        Data::Enum(_) | Data::Union(_) => todo!(),
     }
 }
 
@@ -109,17 +109,11 @@ fn make_box(data: &Data) -> TokenStream {
                         #(#recurse)*
                     }
                 }
-                _ => unimplemented!()
+                _ => todo!()
             }
         }
-        Data::Enum(_) | Data::Union(_) => unimplemented!(),
+        Data::Enum(_) | Data::Union(_) => todo!(),
     }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+

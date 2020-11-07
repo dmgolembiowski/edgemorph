@@ -2,7 +2,7 @@ use derive_builder::Builder;
 use std::rc::Weak;
 use std::cell::RefCell;
 use std::boxed::Box;
-use map_vec::Set;
+use map_vec::Set; // Contemplating an alternative.
 use std::mem::ManuallyDrop;
 
 #[derive(Debug, Clone, Default)]
