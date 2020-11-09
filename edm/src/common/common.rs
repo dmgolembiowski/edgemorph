@@ -1,11 +1,19 @@
-/* Large portions of this file were originally published
+/* Disclaimer: Portions of this file were originally published
  * by contributors/developers at [EdgeDB](https://github.com/edgedb).
- * 
- * I own nothing.
+ * By using this software, you are subject to all of their licenses
+ * including those not explicitly defined in this file.
  */
 #[cfg(not(windows))]
 #[macro_use] extern crate pretty_assertions;
-
+use async_trait::async_trait;
+use futures::select;
+use futures::FutureExt;
+use async_std::{
+    io::{stdin, BufReader},
+    net::{TcpStream, ToSocketAddrs},
+    prelude::*,
+    task,
+};
 use std::sync::Mutex;
 use std::convert::TryInto;
 use std::io::{BufReader, BufRead};
@@ -15,7 +23,7 @@ use std::process;
 use std::env;
 use assert_cmd::Command;
 use serde::{Deserialize};
-use serde_json::{Result, from_str};
+use serde_json::{Result as SerdeResult, from_str};
 use once_cell::sync::Lazy;
 use std::fs::{File};
 use edgedb_client::{
@@ -33,7 +41,124 @@ use futures::future::ready;
 use std::marker::PhantomPinned;
 use core::pin::Pin;
 use pin_utils::pin_mut;
+use std::collections::HashMap;
+use std::error::Error;
+use uuid::Uuid;
+use bytes::{Bytes, BytesMut};
+use edgedb_protocol::server_message::{
+    Authentication,
+    Cardinality,
+    ClientHandshake,
+    ClientMessage,
+    CommandComplete,
+    CommandDataDescription,
+    Data,
+    DescribeAspect,
+    DescribeStatement,
+    ErrorResponse,
+    ErrorSensitivity,
+    ErrorSeverity,
+    Execute,
+    ExecuteScript,
+    IoFormat,
+    LogMessage,
+    MessageSeverity,
+    ParameterStatus,
+    Prepare,
+    PrepareComplete,
+    ReadyForCommand,
+    ReadyForCommand,
+    Restore,
+    RestoreReady,
+    ServerHandshake,
+    ServerKeyData,
+    ServerMessage,
+    TransactionState
+};
 
+
+/* EdmFiber
+ *
+ * This generic `async_trait` is responsible for 
+ * enforcing a common policy for talking to EdgeDB
+ * using the high-level API from 
+ * [edgedb_rust](github.com/edgedb/edgedb-rust).
+ * 
+ * It enforces the minimum requirements for talking
+ * to EdgeDB in a deterministic way under
+ * asynchronous conditions.
+ * 
+ * To implement this trait, your program will need:
+ *   - U: Actor
+ *   - C: Courier + Client
+ *
+ * `U` can be viewed as the "user" of edgemorph.
+ * They want to run actions on the database. In my own
+ * experience, I couldn't care less about the database's 
+ * response to an INSERT or DELETE query.
+ * As an EdgeDB user, I only want to know when an error
+ * happens -- and as long as one doesn't -- I can't be
+ * bothered to slow down and block everything until this
+ * query finishes.
+ *
+ * On the other hand, `SELECT` statements are vitally important
+ * for any of my applications. I probably have upstream functions
+ * and procedures that depend on the outcome of a `SELECT` statement.
+ * Under these conditions, waiting is fine.
+ * But since I'm impatient, I still want other asynchronous work
+ * to continue.
+ *
+ * Likewise, `C` represents features of both a database "client",
+ * as well as a "corresponder" or "courier". It talks to the database,
+ * and informs the `U: Actor` of any responses -- provided that the `U`
+ * cares to receive them.
+ */
+#[async_trait]
+trait EdmFiber<U: Actor, C: Courier + Client> {
+
+    // Spawns a fiber for cooperatively multitasking work between the user
+    // and the database client socket. Returns an error when the underlying
+    // OS cannot spare any more resources.
+    async fn spawn() -> Result<(Self)>;
+
+    // Closes the database connection gracefully. A `timeout` should be
+    // supplied as a number of seconds from an `i32`. 
+    // Otherwise, if `timeout = None` this call could hang.
+    async fn aclose(&mut self, timeout: Option<i32>) -> Result<()>;
+    
+    // Connects this nonblocking fiber to the database with an `async_std::net::TcpStream`.
+    // `C: Client` are responsible for passing an `edgedb_client::Builder`
+    // for connection criteria.
+    async fn connect(&mut self, timeout: Option<i32>) -> Result<()>;
+
+    // "Provide an explicit synchronization point (for the transaction state) ... Sent by the Client"
+    // https://github.com/edgedb/edgedb/blob/a3ccdaa00c2dbe55675794f2fc97314c4fcdb0b7/edb/testbase/protocol/protocol.pyx
+    // ```
+    //   struct Sync {
+    //      // Message type ('S').
+    //      uint8           mtype = 0x53;
+    //
+    //      // Length of message contents in bytes,
+    //      // including self.
+    //      uint32          message_length;
+    //    };
+    // ```
+    async fn sync(&mut self);
+
+    // Should resemble the `mpsc::Channel`. Continuously awaiting new packets
+    // and matching their contents to potential log messages.
+    // Stop `recv`-ing once we get a message.
+    //
+    // Trait implementors should probably implement an optional private method
+    // for `recv_match` based upon the "class" of message.
+    async fn recv(&mut self);
+
+    async fn send(&mut self, msg: &ClientMessage);
+
+    // An alternative to `aclose` that emphasizes "undocking"
+    // from the `C: Courier` relation, but maintaining its `C: Client` stream.
+    async fn release(&self) -> Result<()>;
+}
 
 
 /* In the standard library, pointer types generally do not have structural 
@@ -136,6 +261,8 @@ impl Database {
         }
     }
 }
+
+
 
 
 // This section of the file is largely replicated from the official
@@ -301,32 +428,7 @@ extern fn stop_processes() {
     }
 }
 
-/*
-use std::collections::HashMap;
-use std::error::Error;
 
-use uuid::Uuid;
-use bytes::{Bytes, BytesMut};
-
-use edgedb_protocol::server_message::{ServerMessage};
-use edgedb_protocol::server_message::{ServerHandshake};
-use edgedb_protocol::server_message::{ErrorResponse, ErrorSeverity};
-use edgedb_protocol::server_message::{ReadyForCommand, TransactionState};
-use edgedb_protocol::server_message::{ServerKeyData, ParameterStatus};
-use edgedb_protocol::server_message::{CommandComplete};
-use edgedb_protocol::server_message::{PrepareComplete, Cardinality};
-use edgedb_protocol::server_message::{CommandDataDescription, Data};
-use edgedb_protocol::server_message::{Authentication};
-use edgedb_protocol::server_message::{LogMessage, MessageSeverity};
-use edgedb_protocol::server_message::{RestoreReady};
-
-use edgedb_protocol::client_message::{ClientMessage, ClientHandshake};
-use edgedb_protocol::client_message::{ExecuteScript, Execute};
-use edgedb_protocol::client_message::{Prepare, IoFormat, Cardinality};
-use edgedb_protocol::client_message::{DescribeStatement, DescribeAspect};
-use edgedb_protocol::client_message::{SaslInitialResponse};
-use edgedb_protocol::client_message::{SaslResponse};
-use edgedb_protocol::client_message::Restore;
 
 
 macro_rules! bconcat {
@@ -377,7 +479,7 @@ fn decode(bytes: &[u8]) -> Result<Vec<Descriptor>, DecodeError> {
     assert!(cur.bytes() == b"");
     Ok(result)
 }
-*/
+
 
 // Because `credentials.json` can potentially exist
 // either at the project or the $USER level,  it is
