@@ -67,7 +67,6 @@ use edgedb_protocol::server_message::{
     Prepare,
     PrepareComplete,
     ReadyForCommand,
-    ReadyForCommand,
     Restore,
     RestoreReady,
     ServerHandshake,
@@ -160,6 +159,48 @@ trait EdmFiber<U: Actor, C: Courier + Client> {
     async fn release(&self) -> Result<()>;
 }
 
+//! `Actor`
+//! 
+//! This trait defines shared behavior for two closely-related behaviors:
+//!   1) Client-message creation
+//!   2) Server-response handling
+//! 
+//! Earlier we noted that `Actor` is really just a proxy for the Edgemorph user.
+//! Implementors of the `Actor` are responsible for building low-level communication
+//! corresponding to the `START TRANSACTION` or `BEGIN MIGRATION` calls
+//! originating in `edm make install`. 
+//!
+//! Additionally, `Actor` also templates the behavior for awaiting and processing
+//! `edgemorph` related code in the Python and Rust codegen shared objects.
+//! This will likely need to be re-factored into the `edgemorph-rs` top-level
+//! workspace member.
+//!
+//!
+#[async_trait]
+trait Actor<T, S> 
+    /* Generic implementations on [G] implicitly
+       implement the trait on anything that
+       dereferences to [G], including Vec<G>, Box<[G]>,
+       and Rc<[G]>.
+       */
+    where T: From<[ClientMessage]> + From<[Data]>,
+          S: From<[ServerMessage]> + From<[Data]>
+{
+    // `apply_policy` gives us deterministic control over how the 
+    // the `Actor` will treat to treat the server response (and the lack of one).
+    async fn apply_policy(&mut self, msg: &Self::T, policy: &Policy);
+
+    // `get_policy` retrieves the actor's policy for processing
+    // a server's reponse
+    async fn get_policy(&self, msg: &Self::S) -> Policy;
+
+    // `fmt_msg` incorporates the various 
+    async fn fmt_msg(&mut self, cli_msg: &str) -> T;
+
+   
+
+    
+}
 
 /* In the standard library, pointer types generally do not have structural 
  * pinning, and thus they do not offer pinning projections. 
