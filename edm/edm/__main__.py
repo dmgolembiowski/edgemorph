@@ -410,14 +410,25 @@ def batch_compilation(module_paths: List[str]):
         so keeping the folder constant, we modify the
         destination as `"." + f"{filename}" + ".desastr"`
         """
-        
-        ast_tree = str(serialize(results[i]))
+
+        # This condition can technically happen
+        # if the `compile` call returns `None` instead
+        # of a proper AST
+        try:
+            assert results[i] is not None
+        except AssertionError:
+            print(red(f"ERROR: {module_paths[i]} could not be compiled."))
+            continue
+
+        # Otherwise, we continue with confidence
+
         ast_src  = module_paths[i]
         folder   = str(ast_src.parent) 
         filename = "." + ast_src.name.rstrip(".esdl") + ".desastr"
         ast_path = folder + "/" + filename
-        with open(ast_path, "w") as desastr_file:
-            desastr_file.write(ast_tree)
+        sys.stdout = open(ast_path, "w")
+        results[i].dump()
+        sys.stdout.close()
 
 class Box:
     def __init__(self, ty: Any):
@@ -667,10 +678,6 @@ def compile(args):
             source = f.read()
 
         syntax_lex = qlparser.parse_sdl(source)
-
-        # Do some other things here
-        # ...
-        print(syntax_lex.dump())
         return syntax_lex
 
 
