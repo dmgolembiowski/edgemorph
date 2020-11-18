@@ -61,6 +61,7 @@ class SDLSource:
                         break
                     else:
                         underline += "^"
+                    idx += 1
 
             else:
                 idx += 1
@@ -73,4 +74,3 @@ class SDLSource:
             for j in range(len(self.array[i])):
                 self.friendly += ''.join(self.array[i][j])
             self.friendly += "\n"
-
