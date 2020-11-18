@@ -31,6 +31,7 @@ graphql-core = { git = "https://github.com/graphql-python/graphql-core.git", tag
 promise = { git = "https://github.com/syrusakbary/promise.git", tag = "v2.2.0" }
 Cython = "^0.29.21"
 uvloop = "^0.14.0"
+yaspin = "^1.2.0"
 
 
 [tool.poetry.dev-dependencies]
