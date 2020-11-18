@@ -23,9 +23,10 @@ from edb.edgeql import parser as qlparser
 import pprint
 from functools import wraps
 from random import choice
-from yaspin import yaspin
+from yaspin import yaspin, Spinner
 import time
 from edm.source import SDLSource
+from edb.errors import EdgeQLSyntaxError
 
 __datastore__ = {}
 
@@ -73,7 +74,13 @@ def spin_to_win(function):
         "Initiaiting rocket launch...\n",
         "Normalizing the vectors...\n",
         "Calculating loss values...\n",
-        "Brewing imaginery tea/coffee\n",
+        "Fluxing the capacitors...\n",
+        "Ready Player 1...\n",
+        "Entering cheat codes...\n",
+        "Wubba Lubba Dub Dub...\n",
+        "I'm ready, I'm ready, I'm ready...\n",
+        "Using Squidward's clarinet to unclog the toilet...\n",
+        "Setting it to 'W' for 'Wumbo'...\n",
         "Proving the Riemann Hypothesis...\n",
         "Performing a topological sort...\n",
         "Fending off volatile hackers...\n",
@@ -96,11 +103,12 @@ def spin_to_win(function):
             text_to_display = kw["text"]
 
         if "color" not in kw.keys():
-            color = "cyan"
+            color = "red"
         else:
             color = kw["color"]
-
-        with yaspin(text=text_to_display, color=color) as sp:
+        
+        sp = Spinner(["🌌", "🚀", "🌌"], 100)
+        with yaspin(sp, text=text_to_display, color=color) as sp:
             some_result: Optional[any]
             try:
                 some_result = function(*args, **kw)
@@ -776,8 +784,8 @@ def helpful_parsing(source: str) -> Optional[Any]:
         return syntax_lex
     except EdgeQLSyntaxError as err:
         print("\n"+red("ERROR")+": Syntax correction(s) needed here\n")
-        formatted_err = str(SDLSource(source, err))
-        print(formatted_err)
+        formatted_err = SDLSource(source, err)
+        print(str(formatted_err))
         sys.exit(1)
 
 def test(args):

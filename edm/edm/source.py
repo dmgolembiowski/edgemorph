@@ -1,4 +1,8 @@
 from edb.errors import EdgeQLSyntaxError
+from prompt_toolkit import lexers as pt_lexers
+from edb.tools.pygments import edgeql as eql_pygments
+from prompt_toolkit import document as pt_document
+from prompt_toolkit import styles as pt_styles
 
 class SDLSource:
     def __init__(self, source: str, err: EdgeQLSyntaxError):
@@ -28,6 +32,40 @@ class SDLSource:
     def header(self):
         red = lambda chars: f"\033[091m{chars}\033[0m"
         return red(f"error: {self.err.args[0]}\n")
+
+    @property
+    def style(self):
+        return pt_styles.Style.from_dict({
+            'prompt': '#aaa',
+            'continuation': '#888',
+
+            'bottom-toolbar': 'bg:#222222 #aaaaaa noreverse',
+            'bottom-toolbar.on': 'bg:#222222 #ffffff',
+
+            # See prompt_tookit/styles/defaults.py for the reference.
+            'pygments.name.builtin': '#A6E22E',
+            'pygments.punctuation.navigation': '#e8364f',
+            'pygments.comment': '#555',
+            'pygments.keyword': '#e8364f',
+            'pygments.keyword.constant': 'green',
+            'pygments.operator': '#e8364f',
+            'pygments.literal.string': '#d3c970',
+            'pygments.literal.number': '#9a79d7',
+            'pygments.key': '#555',
+            'pygments.value': '#888',
+        })
+
+    def render(self):
+        desc_doc = pt_document.Document(self.source)
+        lexer = pt_lexers.PygmentsLexer(eql_pygments.EdgeQLLexer)
+        formatter = lexer.lex_document(desc_doc)
+
+        for line in range(desc_doc.line_count):
+            pt_shortcuts.print_formatted_text(
+                pt_formatted_text.FormattedText(formatter(line)),
+                style=self.style
+            )
+        print()
 
     def _insert_underline(self):
         '''
