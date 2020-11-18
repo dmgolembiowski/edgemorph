@@ -17,9 +17,15 @@ from time import sleep
 from typing import Any, Callable, List, Optional, Union
 import json
 import toml
+from edb.errors import EdgeQLSyntaxError
 from edb.common.markup import _serialize as serialize
 from edb.edgeql import parser as qlparser
 import pprint
+from functools import wraps
+from random import choice
+from yaspin import yaspin
+import time
+from edm.source import SDLSource
 
 __datastore__ = {}
 
@@ -43,10 +49,70 @@ class IOResult:
         self.annotation: Optional[str] = annotation
         self.found: bool = found
 
+'''
+TODO: This section should be moved to its own file.
+'''
 
 def red(s: str) -> str:
     return f"\033[91m{s}\033[0m"
 
+def yellow(s: str) -> str:
+    return f"\033[33m{s}\033[0m"
+
+def spin_to_win(function):
+    """spin_to_win(function)
+
+    This function is a graphical context manager.
+    It runs some terminal-bound task in a `yaspin`
+    context, and supplies visual feedback to the user.
+    """
+    on_success = "✔"
+    on_failure = red("✖")
+    options = (
+        "Recombobulating discombobulators...\n",
+        "Initiaiting rocket launch...\n",
+        "Normalizing the vectors...\n",
+        "Calculating loss values...\n",
+        "Brewing imaginery tea/coffee\n",
+        "Proving the Riemann Hypothesis...\n",
+        "Performing a topological sort...\n",
+        "Fending off volatile hackers...\n",
+        "[ Elevator Music Playing ]\n",
+    )
+    
+    @wraps(function)
+    def terminal_spinner(*args, **kw):
+        
+        nonlocal on_success
+        nonlocal on_failure
+        nonlocal options
+        
+        text_to_display: str
+        color: str
+
+        if "text" not in kw.keys():
+            text_to_display = choice(options)
+        else:
+            text_to_display = kw["text"]
+
+        if "color" not in kw.keys():
+            color = "cyan"
+        else:
+            color = kw["color"]
+
+        with yaspin(text=text_to_display, color=color) as sp:
+            some_result: Optional[any]
+            try:
+                some_result = function(*args, **kw)
+                sp.write(hype_str(f"{on_success} The task was successful.\n"))
+                
+                return some_result
+            except Exception as e:
+                
+                sp.write(on_failure + " could not be completed.")
+                raise(e)
+
+    return terminal_spinner
 
 def init(loc: str = ".") -> Result:
     """init
@@ -124,6 +190,10 @@ def init(loc: str = ".") -> Result:
 def hype_print(msg: str):
     sys.stdout.write("\033[;1m")
     print(msg)
+
+def hype_str(msg: str):
+    sys.stdout.write("\033[;1m")
+    return msg
 
 def hype_input(msg: str):
     sys.stdout.write("\033[1;m")
@@ -220,7 +290,6 @@ def glob_paths(cwd: Path, rel_path: Path) -> Path:
 def make(target: str):
     files: Box = find_edgemorph_toml()
     path: Path = files.unwrap().pop()[1].loc
-    print(path)
     edm_toml = load_edgemorph_toml(path)
     try:
         assert edm_toml is not None
@@ -379,12 +448,13 @@ def make(target: str):
 
     # Finally, the moment of truth, calling `compile` on these paths
     if retrieved:
-        print("Compiling your EdgeDB modules....\n") 
         batch_compilation(retrieved)
     sys.exit()
 
 
-def batch_compilation(module_paths: List[str]):
+def batch_compilation(
+        module_paths: List[str], 
+        text="Compiling your EdgeDB modules..."):
 
     poolsize: int = len(module_paths)
     async_pool = multiprocessing.Pool(processes=poolsize)
@@ -394,10 +464,10 @@ def batch_compilation(module_paths: List[str]):
     with async_pool as pool:
         async_jobs = [pool.apply_async(compile, module_paths) for i in range(poolsize)]
         try:
-            async_res = [job.get(timeout=12) for job in async_jobs]
+            async_res = [job.get(timeout=1.7) for job in async_jobs]
             results = copy(async_res)
-        except TimeoutError:
-            print("ERROR: Compilation workers timed out. Exiting.")
+        except multiprocessing.context.TimeoutError as e:
+            print(yellow("ERROR: Please correct any errors and try re-compiling."))
             timed_out = True
     if timed_out:
         sys.exit(1)
@@ -666,20 +736,49 @@ def make_install(args):
 def add(args):
     print("Running add.....")
 
-
-def compile(args):
-    print(f"Compiling {args}....")
+@spin_to_win
+def compile(args, text="Compiling your EdgeDB SDL source modules... "):
+    
     if not isinstance(args, (str, Path)):
         print("ERROR: Method of compilation not yet implemented. Exiting.")
         return None
     else:
         # Assuming args to be the file path
-        with open(args, "r") as f:
-            source = f.read()
-
-        syntax_lex = qlparser.parse_sdl(source)
+        try:
+            with open(args, "r") as f:
+                source = f.read()
+        except FileNotFoundError:
+            print(red("ERROR")+f": `{args}` is not available.")
+            sys.exit(1)
+        # In progress: more helpful error messages
+        # when parsing the source of the SDL fails
+        syntax_lex = helpful_parsing(source)
         return syntax_lex
 
+def helpful_parsing(source: str) -> Optional[Any]:
+    """helpful_parsing(source: str) -> Optional[Any]:
+    
+    When EdgeDB 1-alpha was released to the public,
+    error reporting was not as sophisticated as it
+    is now, but nevertheless I am adding this functionality
+    to edgemorph because I wanted it back then
+    and did not have it.
+
+    This function helps you debug your EdgeDB SDL module
+    files without needing to connect to the database.
+    By accessing `col`, `position`, and `line` on the `err`
+    argument, we can format a new error message
+    to indicate where the EdgeDB syntax error is occuring
+    with a style similar to the one found on the database CLI.
+    """
+    try:
+        syntax_lex = qlparser.parse_sdl(source)
+        return syntax_lex
+    except EdgeQLSyntaxError as err:
+        print("\n"+red("ERROR")+": Syntax correction(s) needed here\n")
+        formatted_err = str(SDLSource(source, err))
+        print(formatted_err)
+        sys.exit(1)
 
 def test(args):
     print("Testing connectivity...")
