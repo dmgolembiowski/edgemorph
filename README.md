@@ -149,7 +149,7 @@ edm init app
 - [X] simple offline SDL syntax checker
 - [X] hidden AST dump to EDB modules file
 - [X] "makeability" protected by project-level configuration file `edgemorph.toml`
-- [ ] single and (concurrent) multi-file lex checking
+- [X] single and (concurrent) multi-file lex checking
 - [ ] `edm add`
 - [ ] `edm make install`
 - [ ] `edm test`
