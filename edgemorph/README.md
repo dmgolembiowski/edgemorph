@@ -1,4 +1,4 @@
-<h1 align="center">Welcome to edgemorph -- the ugly M.V.P. 👋</h1>
+<h1 align="center">Welcome to edgemorph -- the ugly M.V.P. </h1>
 <p>
 </p>
 
