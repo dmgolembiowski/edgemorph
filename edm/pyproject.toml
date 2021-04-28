@@ -10,13 +10,13 @@ packages = [
 
 [tool.poetry.scripts]
 edm = 'edm.__main__:cli_main'
+build-deps = 'edm.__dev__:build_deps'
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 toml = "^0.10.1"
 asyncpg = "^0.20.0"
 click = "^7.1"
-httptools = "^0.0.13"
 immutables = "^0.13"
 parsing = "^1.6.1"
 prompt_toolkit = "3.0.3"

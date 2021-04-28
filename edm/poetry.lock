@@ -99,14 +99,6 @@ reference = "v3.0.3"
 resolved_reference = "799070f6ab7fbd9d94092bcc42cc1fe0b4edb1ea"
 
 [[package]]
-name = "httptools"
-version = "0.0.13"
-description = "A collection of framework independent HTTP protocol utils."
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "immutables"
 version = "0.13"
 description = "Immutable Collections"
@@ -380,8 +372,8 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.8"
-content-hash = "f71f1f06333ab3bb589cc785e7e791a7a70af2cecf3eb277e9ccf9aace1be60a"
+python-versions = "^3.9"
+content-hash = "2d11ce48cd11ebbe23a03eed9448747ea0f7fb991905a7a4efccf29482fdd746"
 
 [metadata.files]
 appdirs = [
@@ -463,9 +455,6 @@ flake8 = [
     {file = "flake8-3.8.4.tar.gz", hash = "sha256:aadae8761ec651813c24be05c6f7b4680857ef6afaae4651a4eccaef97ce6c3b"},
 ]
 graphql-core = []
-httptools = [
-    {file = "httptools-0.0.13.tar.gz", hash = "sha256:e00cbd7ba01ff748e494248183abc6e153f49181169d8a3d41bb49132ca01dfc"},
-]
 immutables = [
     {file = "immutables-0.13-cp35-cp35m-macosx_10_14_x86_64.whl", hash = "sha256:2227d9dcfd287842d518a3f818ad898fe516e0db940302d8fb44ec6e07361e77"},
     {file = "immutables-0.13-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:a44c8b35070ad8359f122a34894aee70e5d0bfa16781ad17e55de0ba75d8c7c4"},
