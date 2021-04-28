@@ -24,14 +24,15 @@ psutil = "~=5.6.1"
 Pygments = "~=2.3.0"
 setproctitle = "^1.1.10"
 setuptools-rust = "0.10.3"
-setuptools_scm = {git="git@github.com:pypa/setuptools_scm.git", tag = "v3.2.0" }
+setuptools_scm = {git="https://github.com/pypa/setuptools_scm.git", tag = "v3.2.0" }
 typing_inspect = { git = "https://github.com/ilevkivskyi/typing_inspect.git", tag = "0.5.0"}
 wcwidth = { git = "https://github.com/jquast/wcwidth.git", tag = "0.2.5" }
 graphql-core = { git = "https://github.com/graphql-python/graphql-core.git", tag = "v3.0.3" }
 promise = { git = "https://github.com/syrusakbary/promise.git", tag = "v2.2.0" }
 Cython = "^0.29.21"
 uvloop = "^0.14.0"
-yaspin = "^1.2.0"
+yaspin = "^1.5.0"
+
 
 
 [tool.poetry.dev-dependencies]
